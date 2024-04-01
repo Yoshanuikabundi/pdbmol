@@ -20,6 +20,7 @@ PDB files are a ubiquitous format for sharing biomolecular structure information
 The objective of PDBMol is to provide a spec-compliant PDB(x)/mmCIF reader/writer library that can be adopted by other projects to provide consistent PDB file handling. A secondary objective is to provide compatibility with common existing PDB dialects. To those ends, our specific feature goals are:
 
 - [ ] To provide a [spec-compliant PDB parser]
+- [ ] To provide a [spec-compliant CIF parser]
 - [ ] To provide a [spec-compliant PDBx/mmCIF parser]
 - [ ] To interpret all standard residue and atom names according to the [CCD]
 - [ ] To provide APIs to process PDB(x)/mmCIF files at the record level
@@ -39,6 +40,7 @@ Non-goals include:
 [CCD]: https://www.wwpdb.org/data/ccd
 [spec-compliant PDB parser]: https://www.wwpdb.org/documentation/file-format-content/format33/v3.3.html
 [spec-compliant PDBx/mmCIF parser]: https://mmcif.wwpdb.org/
+[spec-compliant CIF parser]: https://www.iucr.org/resources/cif/spec/version1.1
 
 ## Installation
 
