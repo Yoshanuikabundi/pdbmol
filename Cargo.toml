@@ -2,7 +2,7 @@
 name = "pdbmol"
 version = "0.1.0"
 edition = "2021"
-description = "Spec-compliant PDB/mmCIF read/write library"
+description = "Spec-compliant PDB(x)/mmCIF read/write library"
 repository = "https://github.com/Yoshanuikabundi/pdbmol"
 license = "MIT OR Apache-2.0"
 
