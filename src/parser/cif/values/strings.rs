@@ -28,7 +28,7 @@ fn eol_text_field<'s>(input: &mut &'s str) -> PResult<&'s str> {
 
 fn double_quoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
     (delimited('"', charsets::printchar0, '"'), peek(whitespace))
-        .map(|(s, w)| s)
+        .map(|(s, _)| s)
         .parse_next(input)
 }
 
@@ -37,7 +37,7 @@ fn single_quoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
         delimited('\'', charsets::printchar0, '\''),
         peek(whitespace),
     )
-        .map(|(s, w)| s)
+        .map(|(s, _)| s)
         .parse_next(input)
 }
 

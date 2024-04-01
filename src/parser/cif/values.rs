@@ -45,10 +45,7 @@ pub fn noteol_value<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
 
 pub fn whitespace_value<'s>(input: &mut &'s str) -> PResult<(&'s str, Value<'s>)> {
     alt((
-        (
-            whitespace.verify(|s: &str| s.chars().last() == Some('\n')),
-            eol_value,
-        ),
+        (whitespace.verify(|s: &str| s.ends_with('\n')), eol_value),
         (whitespace, noteol_value),
     ))
     .parse_next(input)
