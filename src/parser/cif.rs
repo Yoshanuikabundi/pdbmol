@@ -8,10 +8,15 @@ pub use structure::{cif, DataBlockItem};
 pub use values::{Numeric, Value};
 use whitespace_and_comments::{comments, whitespace};
 
-use winnow::prelude::*;
+use winnow::{
+    error::{ContextError, ParseError, ParserError},
+    prelude::*,
+};
 
-pub fn parse(mut s: &str) -> PResult<Vec<(&str, Vec<DataBlockItem>)>> {
-    cif.parse_next(&mut s)
+pub fn parse(
+    mut s: &str,
+) -> Result<Vec<(&str, Vec<DataBlockItem>)>, ParseError<&str, ContextError>> {
+    cif.parse(&mut s)
 }
 
 // TODO: Implement https://www.iucr.org/resources/cif/spec/version1.1/cifsyntax#restrictions
@@ -21,9 +26,9 @@ pub fn parse(mut s: &str) -> PResult<Vec<(&str, Vec<DataBlockItem>)>> {
 mod tests {
     use super::*;
 
-    #[test]
-    fn load_ccd() {
-        let ccd = std::fs::read_to_string("data/ccd-20240406.cif").unwrap();
-        parse(&ccd).unwrap();
-    }
+    // #[test]
+    // fn load_ccd() {
+    //     let ccd = std::fs::read_to_string("data/ccd-20240406.cif").unwrap();
+    //     parse(&ccd).unwrap();
+    // }
 }

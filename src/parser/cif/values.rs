@@ -9,7 +9,7 @@ use super::charsets::nonblank1;
 use super::whitespace_and_comments::whitespace;
 
 // TODO: Split Numeric into uint/int/float here
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Value<'a> {
     Numeric(Numeric),
     String(&'a str),

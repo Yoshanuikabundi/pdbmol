@@ -1,12 +1,14 @@
 use super::charsets;
 use winnow::{
     combinator::{alt, eof, opt, repeat},
+    error::StrContext,
     prelude::*,
 };
 
 fn comment<'s>(input: &mut &'s str) -> PResult<&'s str> {
     ('#', charsets::printchar0, charsets::eol)
         .take()
+        .context(StrContext::Label("comment"))
         .parse_next(input)
 }
 
@@ -31,6 +33,7 @@ pub fn whitespace<'s>(input: &mut &'s str) -> PResult<&'s str> {
             .take(),
         eof.take(),
     ))
+    .context(StrContext::Label("whitespace"))
     .parse_next(input)
 }
 
