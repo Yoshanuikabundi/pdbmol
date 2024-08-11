@@ -20,7 +20,7 @@ fn data_items_loop<'s>(input: &mut &'s str) -> PResult<HashMap<&'s str, Vec<Valu
     let tags = loop_header.parse_next(input)?;
     repeat::<_, _, Vec<_>, _, _>(
         0..,
-        repeat::<_, _, Vec<_>, _, _>(tags.len(), whitespace_value.map(|(_, v)| v)),
+        repeat::<_, _, Vec<_>, _, _>(tags.len(), whitespace_value),
     )
     .map(|rows| {
         let mut values: Vec<_> = tags
@@ -38,14 +38,10 @@ fn data_items_loop<'s>(input: &mut &'s str) -> PResult<HashMap<&'s str, Vec<Valu
 }
 
 fn data_items<'s>(input: &mut &'s str) -> PResult<HashMap<&'s str, Value<'s>>> {
-    separated::<_, _, Vec<_>, _, _, _, _>(
-        1..,
-        (tag, whitespace_value).map(|(tag, (_, value))| (tag, value)),
-        whitespace,
-    )
-    .map(HashMap::from_iter)
-    .context(StrContext::Label("data items"))
-    .parse_next(input)
+    separated::<_, _, Vec<_>, _, _, _, _>(1.., (tag, whitespace_value), whitespace)
+        .map(HashMap::from_iter)
+        .context(StrContext::Label("data items"))
+        .parse_next(input)
 }
 
 // fn save_frame_heading<'s>(input: &mut &'s str) -> PResult<&'s str> {
@@ -124,10 +120,10 @@ mod tests {
         assert_eq!(
             output,
             Ok(vec![
-                "_pdbx_chem_comp_audit.comp_id",
-                "_pdbx_chem_comp_audit.action_type",
-                "_pdbx_chem_comp_audit.date",
-                "_pdbx_chem_comp_audit.processing_site"
+                "pdbx_chem_comp_audit.comp_id",
+                "pdbx_chem_comp_audit.action_type",
+                "pdbx_chem_comp_audit.date",
+                "pdbx_chem_comp_audit.processing_site"
             ])
         );
     }
@@ -151,7 +147,7 @@ mod tests {
             Ok(HashMap::from_iter(
                 [
                     (
-                        "_pdbx_chem_comp_audit.comp_id",
+                        "pdbx_chem_comp_audit.comp_id",
                         vec![
                             Value::String("PHE"),
                             Value::String("PHE"),
@@ -159,7 +155,7 @@ mod tests {
                         ]
                     ),
                     (
-                        "_pdbx_chem_comp_audit.action_type",
+                        "pdbx_chem_comp_audit.action_type",
                         vec![
                             Value::String("Create component"),
                             Value::String("Modify descriptor"),
@@ -167,7 +163,7 @@ mod tests {
                         ]
                     ),
                     (
-                        "_pdbx_chem_comp_audit.date",
+                        "pdbx_chem_comp_audit.date",
                         vec![
                             Value::String("1999-07-08"),
                             Value::String("2011-06-04"),
@@ -175,7 +171,7 @@ mod tests {
                         ]
                     ),
                     (
-                        "_pdbx_chem_comp_audit.processing_site",
+                        "pdbx_chem_comp_audit.processing_site",
                         vec![
                             Value::String("EBI"),
                             Value::String("RCSB"),

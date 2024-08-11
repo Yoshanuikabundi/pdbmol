@@ -59,6 +59,7 @@ fn single_quoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
 fn eol_unquoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
     (charsets::ordinary_char, charsets::nonblank0)
         .take()
+        .context(StrContext::Label("unquoted string"))
         .parse_next(input)
 }
 
@@ -66,6 +67,7 @@ fn eol_unquoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
 fn noteol_unquoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
     (alt((charsets::ordinary_char, ';')), charsets::nonblank0)
         .take()
+        .context(StrContext::Label("unquoted string"))
         .parse_next(input)
 }
 
@@ -77,6 +79,7 @@ pub fn eol_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
         single_quoted_string,
         double_quoted_string,
     ))
+    .context(StrContext::Label("eol string"))
     .parse_next(input)
 }
 
@@ -87,6 +90,7 @@ pub fn noteol_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
         single_quoted_string,
         double_quoted_string,
     ))
+    .context(StrContext::Label("noteol string"))
     .parse_next(input)
 }
 
