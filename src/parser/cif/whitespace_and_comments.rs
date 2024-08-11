@@ -6,31 +6,31 @@ use winnow::{
 
 fn comment<'s>(input: &mut &'s str) -> PResult<&'s str> {
     ('#', charsets::printchar0, charsets::eol)
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
 pub fn comments<'s>(input: &mut &'s str) -> PResult<&'s str> {
     repeat::<_, _, (), _, _>(1.., comment)
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
 fn tokenized_comments<'s>(input: &mut &'s str) -> PResult<&'s str> {
     (
-        repeat::<_, _, (), _, _>(1.., charsets::whitespace).recognize(),
+        repeat::<_, _, (), _, _>(1.., charsets::whitespace).take(),
         comments,
     )
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
 pub fn whitespace<'s>(input: &mut &'s str) -> PResult<&'s str> {
     repeat::<_, _, (), _, _>(
         1..,
-        alt((tokenized_comments.recognize(), charsets::whitespace)),
+        alt((tokenized_comments.take(), charsets::whitespace)),
     )
-    .recognize()
+    .take()
     .parse_next(input)
 }
 

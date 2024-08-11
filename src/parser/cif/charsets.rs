@@ -32,25 +32,25 @@ pub fn any_print_char(input: &mut &str) -> PResult<char> {
 
 pub fn printchar0<'s>(input: &mut &'s str) -> PResult<&'s str> {
     repeat::<_, _, (), _, _>(0.., any_print_char)
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
 pub fn printchar1<'s>(input: &mut &'s str) -> PResult<&'s str> {
     repeat::<_, _, (), _, _>(1.., any_print_char)
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
 pub fn nonblank0<'s>(input: &mut &'s str) -> PResult<&'s str> {
     repeat::<_, _, (), _, _>(0.., nonblank_char)
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
 pub fn nonblank1<'s>(input: &mut &'s str) -> PResult<&'s str> {
     repeat::<_, _, (), _, _>(1.., nonblank_char)
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
@@ -59,7 +59,7 @@ pub fn eol<'s>(input: &mut &'s str) -> PResult<&'s str> {
 }
 
 pub fn whitespace<'s>(input: &mut &'s str) -> PResult<&'s str> {
-    alt((' '.recognize(), '\t'.recognize(), eol.recognize())).parse_next(input)
+    alt((' '.take(), '\t'.take(), eol.take())).parse_next(input)
 }
 
 #[cfg(test)]

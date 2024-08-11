@@ -52,5 +52,5 @@ pub fn whitespace_value<'s>(input: &mut &'s str) -> PResult<(&'s str, Value<'s>)
 }
 
 pub fn tag<'s>(input: &mut &'s str) -> PResult<&'s str> {
-    ('_'.recognize(), nonblank1).recognize().parse_next(input)
+    ('_'.take(), nonblank1).take().parse_next(input)
 }

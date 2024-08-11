@@ -15,14 +15,14 @@ type Integer = i32;
 
 fn integer(input: &mut &str) -> PResult<Integer> {
     (opt(one_of(('+', '-'))), unsigned_integer)
-        .recognize()
+        .take()
         .parse_to()
         .parse_next(input)
 }
 
 fn exponent<'s>(input: &mut &'s str) -> PResult<&'s str> {
     preceded(one_of(('e', 'E')), integer)
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
@@ -30,15 +30,15 @@ type Float = f64;
 
 fn float(input: &mut &str) -> PResult<Float> {
     alt((
-        (integer, exponent).recognize(),
+        (integer, exponent).take(),
         (
             opt(one_of(('+', '-'))),
-            alt(((digit0, '.', digit1).recognize(), (digit1, '.').recognize())),
+            alt(((digit0, '.', digit1).take(), (digit1, '.').take())),
             opt(exponent),
         )
-            .recognize(),
+            .take(),
     ))
-    .recognize()
+    .take()
     .parse_to()
     .parse_next(input)
 }

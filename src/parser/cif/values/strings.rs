@@ -22,7 +22,7 @@ fn eol_text_field<'s>(input: &mut &'s str) -> PResult<&'s str> {
                     .verify(|(_, eol)| !eol.is_empty()), // Prevent infinite loop on EOF
             ),
         )
-            .recognize(),
+            .take(),
         ';',
     )
     .parse_next(input)
@@ -36,7 +36,7 @@ fn double_quoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
             charsets::any_print_char.and_then(('"', peek(whitespace))),
         ),
     )
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
@@ -52,14 +52,14 @@ fn single_quoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
 /// This parser must only be called immediately after an EOL
 fn eol_unquoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
     (charsets::ordinary_char, charsets::nonblank0)
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
 /// This parser must only be called immediately after a non-EOL character
 fn noteol_unquoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
     (alt((charsets::ordinary_char, ';')), charsets::nonblank0)
-        .recognize()
+        .take()
         .parse_next(input)
 }
 
