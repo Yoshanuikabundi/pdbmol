@@ -1,6 +1,6 @@
 use winnow::{
     ascii::line_ending,
-    combinator::{alt, eof, repeat},
+    combinator::{alt, eof, opt, repeat},
     error::StrContext,
     prelude::*,
     token::one_of,
@@ -27,6 +27,12 @@ pub fn text_lead_char(input: &mut &str) -> PResult<char> {
 pub fn any_print_char(input: &mut &str) -> PResult<char> {
     one_of(('\t', ' ', '!'..='~'))
         .context(StrContext::Label("Print character"))
+        .parse_next(input)
+}
+
+pub fn any_print_char_noquote(input: &mut &str) -> PResult<char> {
+    one_of(('\t', ' ', '!', '#'..='&', '('..='~'))
+        .context(StrContext::Label("Print character (except quotes)"))
         .parse_next(input)
 }
 
@@ -59,7 +65,7 @@ pub fn eol<'s>(input: &mut &'s str) -> PResult<&'s str> {
 }
 
 pub fn whitespace<'s>(input: &mut &'s str) -> PResult<&'s str> {
-    alt((' '.take(), '\t'.take(), eol.take())).parse_next(input)
+    alt((' '.take(), '\t'.take(), line_ending.take())).parse_next(input)
 }
 
 #[cfg(test)]

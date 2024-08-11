@@ -1,7 +1,8 @@
 use winnow::{
-    combinator::{alt, delimited, opt, peek, repeat},
-    error::{ContextError, StrContext::*, StrContextValue::*},
+    combinator::{alt, delimited, dispatch, eof, not, opt, peek, repeat, repeat_till, terminated},
+    error::StrContext,
     prelude::*,
+    token::{any, one_of},
 };
 
 use super::super::{charsets, whitespace};
@@ -29,24 +30,29 @@ fn eol_text_field<'s>(input: &mut &'s str) -> PResult<&'s str> {
 }
 
 fn double_quoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
-    (
+    delimited(
         '"',
-        repeat(
-            0..,
-            charsets::any_print_char.and_then(('"', peek(whitespace))),
-        ),
+        repeat_till::<_, _, (), _, _, _, _>(0.., charsets::any_print_char, peek(('"', whitespace)))
+            .take(),
+        '"',
     )
-        .take()
-        .parse_next(input)
+    .context(StrContext::Label("double quoted string"))
+    .parse_next(input)
 }
 
 fn single_quoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
-    (
-        delimited('\'', charsets::printchar0, '\''),
-        peek(whitespace),
+    delimited(
+        '\'',
+        repeat_till::<_, _, (), _, _, _, _>(
+            0..,
+            charsets::any_print_char,
+            peek(('\'', whitespace)),
+        )
+        .take(),
+        '\'',
     )
-        .map(|(s, _)| s)
-        .parse_next(input)
+    .context(StrContext::Label("single quoted string"))
+    .parse_next(input)
 }
 
 /// This parser must only be called immediately after an EOL
@@ -110,15 +116,71 @@ mod tests {
 
     #[test]
     fn test_double_quoted_string() {
-        let mut stream = "\"This is a double quoted string\" ";
-
+        let mut stream = r#""This is a double quoted string" "#;
         let output = double_quoted_string.parse_next(&mut stream);
         assert_eq!(output, Ok("This is a double quoted string"));
         assert_eq!(stream, " ");
 
-        let mut stream = "\"Double quoted strings must be succeeded by whitespace\"lol";
-
+        let mut stream = r#""Double quoted strings must be proceeded by whitespace"lol"#;
         let output = double_quoted_string.parse_next(&mut stream);
         assert!(output.is_err());
+
+        let mut stream = r#""Double quoted strings may include 'single quotes'" "#;
+        let output = terminated(double_quoted_string, " ").parse(&mut stream);
+        assert_eq!(
+            output,
+            Ok(r#"Double quoted strings may include 'single quotes'"#)
+        );
+
+        let mut stream = r#""Double quoted strings may include '"' as long as it is not followed by whitespace" "#;
+        let output = terminated(double_quoted_string, " ").parse(&mut stream);
+        assert_eq!(
+            output,
+            Ok(
+                r#"Double quoted strings may include '"' as long as it is not followed by whitespace"#
+            )
+        );
+
+        let mut stream = r#""Double quoted strings may be proceeded by EOF""#;
+        let output = double_quoted_string.parse_next(&mut stream);
+        assert_eq!(
+            output,
+            Ok(r#"Double quoted strings may be proceeded by EOF"#)
+        );
+    }
+
+    #[test]
+    fn test_single_quoted_string() {
+        let mut stream = r#"'This is a single quoted string' "#;
+        let output = single_quoted_string.parse_next(&mut stream);
+        assert_eq!(output, Ok("This is a single quoted string"));
+        assert_eq!(stream, " ");
+
+        let mut stream = r#"'Single quoted strings must be proceeded by whitespace'lol"#;
+        let output = single_quoted_string.parse_next(&mut stream);
+        assert!(output.is_err());
+
+        let mut stream = r#"'Single quoted strings may include "double quotes"' "#;
+        let output = terminated(single_quoted_string, " ").parse(&mut stream);
+        assert_eq!(
+            output,
+            Ok(r#"Single quoted strings may include "double quotes""#)
+        );
+
+        let mut stream = r#"'Single quoted strings may include "'" as long as it is not followed by whitespace' "#;
+        let output = terminated(single_quoted_string, " ").parse(&mut stream);
+        assert_eq!(
+            output,
+            Ok(
+                r#"Single quoted strings may include "'" as long as it is not followed by whitespace"#
+            )
+        );
+
+        let mut stream = r#"'Single quoted strings may be proceeded by EOF'"#;
+        let output = single_quoted_string.parse_next(&mut stream);
+        assert_eq!(
+            output,
+            Ok(r#"Single quoted strings may be proceeded by EOF"#)
+        );
     }
 }

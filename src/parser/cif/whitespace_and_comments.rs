@@ -1,6 +1,6 @@
 use super::charsets;
 use winnow::{
-    combinator::{alt, repeat},
+    combinator::{alt, eof, opt, repeat},
     prelude::*,
 };
 
@@ -26,11 +26,11 @@ fn tokenized_comments<'s>(input: &mut &'s str) -> PResult<&'s str> {
 }
 
 pub fn whitespace<'s>(input: &mut &'s str) -> PResult<&'s str> {
-    repeat::<_, _, (), _, _>(
-        1..,
-        alt((tokenized_comments.take(), charsets::whitespace)),
-    )
-    .take()
+    alt((
+        repeat::<_, _, (), _, _>(1.., alt((tokenized_comments.take(), charsets::whitespace)))
+            .take(),
+        eof.take(),
+    ))
     .parse_next(input)
 }
 
