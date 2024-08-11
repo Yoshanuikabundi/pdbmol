@@ -1,7 +1,6 @@
-#![doc = include_str!("../README.md")]
-
-pub mod parser;
+use pdbmol::data::CCD;
 
 fn main() {
-    println!("Hello, world!");
+    let ccd = CCD.clone();
+    println!("{ccd:?}")
 }

@@ -43,7 +43,6 @@ fn float(input: &mut &str) -> PResult<Float> {
     .parse_next(input)
 }
 
-// TODO: Retain uint/int typing distinction
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum Number {
     Int(Integer),
@@ -51,7 +50,7 @@ pub enum Number {
 }
 
 fn number(input: &mut &str) -> PResult<Number> {
-    alt((integer.map(Number::Int), float.map(Number::Float))).parse_next(input)
+    alt((float.map(Number::Float), integer.map(Number::Int))).parse_next(input)
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -63,11 +62,11 @@ pub struct Numeric {
 impl Numeric {
     pub fn parser(input: &mut &str) -> PResult<Self> {
         alt((
-            number.map(|value| Self { value, esd: None }),
             (number, '(', unsigned_integer, ')').map(|(value, _, esd, _)| Self {
                 value,
                 esd: Some(esd),
             }),
+            number.map(|value| Self { value, esd: None }),
         ))
         .parse_next(input)
     }
@@ -147,32 +146,105 @@ mod tests {
 
     #[test]
     fn test_float() {
-        let mut stream = "5e3";
-        let output = float.parse_next(&mut stream);
-        assert_eq!(stream, "");
-        assert_eq!(output, Ok(5e3));
+        assert_eq!(float.parse("5e3"), Ok(5e3));
 
-        let mut stream = "5.0e3";
-        let output = float.parse_next(&mut stream);
-        assert_eq!(stream, "");
-        assert_eq!(output, Ok(5e3));
+        assert_eq!(float.parse("5.0e3"), Ok(5e3));
 
-        let mut stream = ".3e-3";
-        let output = float.parse_next(&mut stream);
-        assert_eq!(stream, "");
-        assert_eq!(output, Ok(0.3e-3));
+        assert_eq!(float.parse(".3e-3"), Ok(0.3e-3));
 
-        let mut stream = "8.5";
-        let output = float.parse_next(&mut stream);
-        assert_eq!(stream, "");
-        assert_eq!(output, Ok(8.5));
+        assert_eq!(float.parse("8.5"), Ok(8.5));
 
-        let mut stream = ".e9";
-        let output = float.parse_next(&mut stream);
-        assert!(output.is_err());
+        assert!(float.parse(".e9").is_err());
 
-        let mut stream = "564";
-        let output = float.parse_next(&mut stream);
-        assert!(output.is_err());
+        assert!(float.parse("564").is_err());
+    }
+
+    #[test]
+    fn test_number() {
+        assert_eq!(number.parse("5e3"), Ok(Number::Float(5e3)));
+
+        assert_eq!(number.parse("5"), Ok(Number::Int(5)));
+
+        assert_eq!(number.parse("-5"), Ok(Number::Int(-5)));
+
+        assert_eq!(number.parse("+354"), Ok(Number::Int(354)));
+
+        assert_eq!(
+            number.parse("+342.63547e-23"),
+            Ok(Number::Float(342.63547e-23))
+        );
+
+        assert!(number.parse("hello").is_err());
+    }
+
+    #[test]
+    fn test_numeric() {
+        assert_eq!(
+            Numeric::parser.parse("5e3"),
+            Ok(Numeric {
+                value: Number::Float(5e3),
+                esd: None
+            })
+        );
+
+        assert_eq!(
+            Numeric::parser.parse("5"),
+            Ok(Numeric {
+                value: Number::Int(5),
+                esd: None
+            })
+        );
+
+        assert_eq!(
+            Numeric::parser.parse("5."),
+            Ok(Numeric {
+                value: Number::Float(5.),
+                esd: None
+            })
+        );
+
+        assert_eq!(
+            Numeric::parser.parse("-5"),
+            Ok(Numeric {
+                value: Number::Int(-5),
+                esd: None
+            })
+        );
+
+        assert_eq!(
+            Numeric::parser.parse("+354"),
+            Ok(Numeric {
+                value: Number::Int(354),
+                esd: None
+            })
+        );
+
+        assert_eq!(
+            Numeric::parser.parse("+342.63547e-23"),
+            Ok(Numeric {
+                value: Number::Float(342.63547e-23),
+                esd: None
+            })
+        );
+
+        assert_eq!(
+            Numeric::parser.parse("7(2)"),
+            Ok(Numeric {
+                value: Number::Int(7),
+                esd: Some(2),
+            })
+        );
+
+        assert_eq!(
+            Numeric::parser.parse("+342.63547e-23(54)"),
+            Ok(Numeric {
+                value: Number::Float(342.63547e-23),
+                esd: Some(54),
+            })
+        );
+
+        assert!(Numeric::parser.parse("7(2.)").is_err());
+
+        assert!(Numeric::parser.parse("hello").is_err());
     }
 }

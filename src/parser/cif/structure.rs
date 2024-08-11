@@ -54,6 +54,7 @@ fn datablock_heading<'s>(input: &mut &'s str) -> PResult<&'s str> {
     preceded(reserved::data_, nonblank1).parse_next(input)
 }
 
+#[derive(Debug, Clone)]
 pub enum DataBlockItem<'s> {
     DataItems(HashMap<&'s str, Value<'s>>),
     SaveFrame((&'s str, HashMap<&'s str, Value<'s>>)),

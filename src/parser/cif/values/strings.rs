@@ -1,5 +1,6 @@
 use winnow::{
     combinator::{alt, delimited, opt, peek, repeat},
+    error::{ContextError, StrContext::*, StrContextValue::*},
     prelude::*,
 };
 
@@ -17,7 +18,8 @@ fn eol_text_field<'s>(input: &mut &'s str) -> PResult<&'s str> {
                 (
                     opt((charsets::text_lead_char, charsets::printchar0)),
                     charsets::eol,
-                ),
+                )
+                    .verify(|(_, eol)| !eol.is_empty()), // Prevent infinite loop on EOF
             ),
         )
             .recognize(),
@@ -27,8 +29,14 @@ fn eol_text_field<'s>(input: &mut &'s str) -> PResult<&'s str> {
 }
 
 fn double_quoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
-    (delimited('"', charsets::printchar0, '"'), peek(whitespace))
-        .map(|(s, _)| s)
+    (
+        '"',
+        repeat(
+            0..,
+            charsets::any_print_char.and_then(('"', peek(whitespace))),
+        ),
+    )
+        .recognize()
         .parse_next(input)
 }
 
@@ -74,4 +82,43 @@ pub fn noteol_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
         double_quoted_string,
     ))
     .parse_next(input)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_eol_text_field() {
+        let mut stream = "\n;this is a text field\n;";
+
+        charsets::eol.parse_next(&mut stream).unwrap();
+        let output = eol_text_field.parse(stream);
+        assert_eq!(output, Ok("this is a text field\n"));
+
+        let mut stream = "\n;this is a text field;";
+
+        charsets::eol.parse_next(&mut stream).unwrap();
+        assert!(eol_text_field.parse(stream).is_err());
+
+        let mut stream = "\n;this is a text field;\nit has multiple lines\n;";
+
+        charsets::eol.parse_next(&mut stream).unwrap();
+        let output = eol_text_field.parse(stream);
+        assert_eq!(output, Ok("this is a text field;\nit has multiple lines\n"));
+    }
+
+    #[test]
+    fn test_double_quoted_string() {
+        let mut stream = "\"This is a double quoted string\" ";
+
+        let output = double_quoted_string.parse_next(&mut stream);
+        assert_eq!(output, Ok("This is a double quoted string"));
+        assert_eq!(stream, " ");
+
+        let mut stream = "\"Double quoted strings must be succeeded by whitespace\"lol";
+
+        let output = double_quoted_string.parse_next(&mut stream);
+        assert!(output.is_err());
+    }
 }

@@ -1,24 +1,33 @@
 use winnow::{
     ascii::line_ending,
     combinator::{alt, eof, repeat},
+    error::StrContext,
     prelude::*,
     token::one_of,
 };
 
 pub fn ordinary_char(input: &mut &str) -> PResult<char> {
-    one_of(('!', '%'..='&', '('..=':', '<'..='Z', '\\', '^', '`'..='~')).parse_next(input)
+    one_of(('!', '%'..='&', '('..=':', '<'..='Z', '\\', '^', '`'..='~'))
+        .context(StrContext::Label("Ordinary character"))
+        .parse_next(input)
 }
 
 pub fn nonblank_char(input: &mut &str) -> PResult<char> {
-    one_of('!'..='~').parse_next(input)
+    one_of('!'..='~')
+        .context(StrContext::Label("Non-blank character"))
+        .parse_next(input)
 }
 
 pub fn text_lead_char(input: &mut &str) -> PResult<char> {
-    one_of(('\t', ' ', '!'..=':', '<'..='~')).parse_next(input)
+    one_of(('\t', ' ', '!'..=':', '<'..='~'))
+        .context(StrContext::Label("Text lead character"))
+        .parse_next(input)
 }
 
 pub fn any_print_char(input: &mut &str) -> PResult<char> {
-    one_of(('\t', ' ', '!'..='~')).parse_next(input)
+    one_of(('\t', ' ', '!'..='~'))
+        .context(StrContext::Label("Print character"))
+        .parse_next(input)
 }
 
 pub fn printchar0<'s>(input: &mut &'s str) -> PResult<&'s str> {
