@@ -96,40 +96,6 @@ pub struct Residue<'s> {
     bonds: Bonds<'s>,
 }
 
-impl<'s> TryFrom<&Vec<DataBlockItem<'s>>> for Residue<'s> {
-    type Error = String;
-
-    fn try_from(value: &Vec<DataBlockItem<'s>>) -> Result<Self, Self::Error> {
-        let atom_table = match value.get(1) {
-            Some(DataBlockItem::Table(atom_table)) => atom_table,
-            Some(_) => Err("second data block item isn't atom table")?,
-            None => Err("residue definition has only one data block item")?,
-        };
-        let atoms = Atoms::try_from(atom_table)?;
-
-        let bond_table = match value.get(2) {
-            Some(DataBlockItem::Table(bond_table)) => bond_table,
-            Some(_) => Err("third data block item isn't bond table")?,
-            None => Err("residue definition has only two data block item")?,
-        };
-        let bonds = Bonds::try_from(bond_table)?;
-
-        match value.get(0) {
-            Some(DataBlockItem::DataItems(hash_map)) => Ok(Self {
-                id: hash_map.get("chem_comp.id").ok_or("no id")?,
-                name: hash_map.get("chem_comp.name").ok_or("no name")?,
-                linking_type: LinkingType::from_str(
-                    hash_map.get("chem_comp.type").ok_or("no type")?,
-                )?,
-                atoms,
-                bonds,
-            }),
-            Some(d) => Err(format!("first data block item {d:#?} isn't chem_comp")),
-            None => Err("empty residue definition".to_string()),
-        }
-    }
-}
-
 impl<'s> TryFrom<&ParsedDataBlock<'s>> for Residue<'s> {
     type Error = String;
 
