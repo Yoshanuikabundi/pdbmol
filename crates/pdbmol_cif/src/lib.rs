@@ -50,8 +50,6 @@ pub fn parse(mut s: &str) -> Result<ParsedCif, ParseError<&str, ContextError>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // #[test]
     // fn load_ccd() {
     //     let ccd = std::fs::read_to_string("data/ccd-20240406.cif").unwrap();

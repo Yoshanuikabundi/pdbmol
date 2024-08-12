@@ -1,5 +1,5 @@
 [package]
-name = "pdbmol"
+name = "pdbmol_ccdparse"
 version = "0.1.0"
 edition = "2021"
 description = "Spec-compliant PDB(x)/mmCIF read/write library"
@@ -8,8 +8,4 @@ license = "MIT OR Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [dependencies]
-pdbmol_cif = { path = "crates/pdbmol_cif" }
-pdbmol_ccd = { path = "crates/pdbmol_ccd" }
-
-[workspace]
-members = ["crates/*"]
+pdbmol_cif = { path = "../pdbmol_cif" }

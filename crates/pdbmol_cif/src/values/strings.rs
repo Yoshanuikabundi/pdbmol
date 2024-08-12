@@ -96,6 +96,7 @@ pub fn noteol_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use winnow::combinator::terminated;
 
     #[test]
     fn test_eol_text_field() {

@@ -126,8 +126,8 @@ pub fn tag<'s>(input: &mut &'s str) -> PResult<&'s str> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parser::cif::charsets::eol;
-    use crate::parser::cif::values::numeric::Number;
+    use crate::charsets::eol;
+    use crate::values::numeric::Number;
     use winnow::combinator::preceded;
 
     #[test]

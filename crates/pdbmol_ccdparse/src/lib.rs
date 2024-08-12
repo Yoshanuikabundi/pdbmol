@@ -2,10 +2,10 @@
 
 use std::{collections::HashMap, str::FromStr};
 
-use crate::parser::cif::ParsedDataBlock;
+use pdbmol_cif::ParsedDataBlock;
 
 #[derive(Debug, Clone, PartialEq)]
-enum LinkingType {
+pub enum LinkingType {
     DBetaPeptideCGammaLinking,
     DGammaPeptideCDeltaLinking,
     DPeptideCoohCarboxyTerminus,
@@ -125,7 +125,7 @@ impl<'s> TryFrom<&ParsedDataBlock<'s>> for Residue<'s> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum AtomStereo {
+pub enum AtomStereo {
     R,
     S,
     None,
@@ -145,7 +145,7 @@ impl FromStr for AtomStereo {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct Atoms<'s> {
+pub struct Atoms<'s> {
     atom_id: Vec<&'s str>,
     symbol: Vec<&'s str>,
     charge: Vec<Option<i32>>,
@@ -272,7 +272,7 @@ fn try_as_bool(value: &str) -> Result<bool, String> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum BondStereo {
+pub enum BondStereo {
     E,
     Z,
     None,
@@ -292,7 +292,7 @@ impl FromStr for BondStereo {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-enum BondOrder {
+pub enum BondOrder {
     Single,
     Double,
     Triple,
@@ -322,7 +322,7 @@ impl Into<u8> for BondOrder {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct Bonds<'s> {
+pub struct Bonds<'s> {
     atom1: Vec<&'s str>,
     atom2: Vec<&'s str>,
     order: Vec<BondOrder>,

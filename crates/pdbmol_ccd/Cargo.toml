@@ -1,0 +1,11 @@
+[package]
+name = "pdbmol_ccd"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pdbmol_ccdparse = { path = "../pdbmol_ccdparse" }
+
+[build-dependencies]
+phf = { version = "0.11.1", default-features = false }
+phf_codegen = "0.11.1"

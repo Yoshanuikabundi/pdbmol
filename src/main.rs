@@ -1,4 +1,5 @@
-use pdbmol::parser::cif;
+use pdbmol_ccd::data::Residue;
+use pdbmol_cif as cif;
 use std::{collections::HashMap, env, error::Error, fs, path::Path};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -13,8 +14,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         match cif_parsed {
             Ok(d) => {
                 println!("{:#?}", d);
-                let res =
-                    pdbmol::ccd::Residue::try_from(&d.into_iter().next().ok_or("no datablock")?.1);
+                let res = Residue::try_from(&d.into_iter().next().ok_or("no datablock")?.1);
                 println!("{:#?}", res);
             }
             Err(e) => println!("{}", e.to_string()),
@@ -27,12 +27,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         match cif_parsed {
             Err(e) => println!("{}", e.to_string()),
             Ok(d) => {
-                let map: Result<HashMap<&'_ str, pdbmol::ccd::Residue>, _> = d
+                let map: Result<HashMap<&'_ str, Residue>, _> = d
                     .iter()
                     .filter(|(key, _)| !["UNL"].contains(key)) // Filter out special residues
                     .map(|(key, value)| {
                         println!("loading residue {key}");
-                        pdbmol::ccd::Residue::try_from(value).map(|v| (*key, v))
+                        Residue::try_from(value).map(|v| (*key, v))
                     })
                     .collect();
                 println!("{:#?}", map?)
