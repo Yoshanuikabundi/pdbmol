@@ -1,6 +1,6 @@
 use winnow::{
     ascii::line_ending,
-    combinator::{alt, eof, opt, repeat},
+    combinator::{alt, eof, repeat},
     error::StrContext,
     prelude::*,
     token::one_of,

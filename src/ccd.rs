@@ -2,7 +2,7 @@
 
 use std::{collections::HashMap, str::FromStr};
 
-use crate::parser::cif::{DataBlockItem, ParsedCif, ParsedDataBlock, Value};
+use crate::parser::cif::ParsedDataBlock;
 
 #[derive(Debug, Clone, PartialEq)]
 enum LinkingType {

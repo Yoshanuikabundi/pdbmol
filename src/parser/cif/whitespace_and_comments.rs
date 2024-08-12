@@ -1,6 +1,6 @@
 use super::charsets;
 use winnow::{
-    combinator::{alt, eof, opt, repeat},
+    combinator::{alt, eof, repeat},
     error::StrContext,
     prelude::*,
 };

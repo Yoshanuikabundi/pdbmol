@@ -2,13 +2,11 @@ use std::collections::HashMap;
 
 use super::charsets::nonblank1;
 use super::reserved;
-use super::values::{noteol_value, tag, whitespace_value};
-use super::Value;
+use super::values::{tag, whitespace_value};
 use super::{comments, whitespace};
 use winnow::combinator::{alt, opt, preceded, repeat, separated};
 use winnow::error::StrContext;
 use winnow::prelude::*;
-use winnow::stream::Stream;
 
 fn loop_header<'s>(input: &mut &'s str) -> PResult<Vec<&'s str>> {
     preceded(reserved::loop_, repeat(1.., preceded(whitespace, tag)))

@@ -1,8 +1,7 @@
 use winnow::{
-    combinator::{alt, delimited, dispatch, eof, not, opt, peek, repeat, repeat_till, terminated},
+    combinator::{alt, delimited, opt, peek, repeat, repeat_till},
     error::StrContext,
     prelude::*,
-    token::{any, one_of},
 };
 
 use super::super::{charsets, whitespace};

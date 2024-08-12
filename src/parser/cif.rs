@@ -11,7 +11,7 @@ pub use values::{Numeric, Value};
 use whitespace_and_comments::{comments, whitespace};
 
 use winnow::{
-    error::{ContextError, ParseError, ParserError},
+    error::{ContextError, ParseError},
     prelude::*,
 };
 
