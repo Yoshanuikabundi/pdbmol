@@ -1,1 +1,1 @@
-pub use pdbmol_ccdparse as data;
+pub use pdbmol_ccdparse::datatypes;

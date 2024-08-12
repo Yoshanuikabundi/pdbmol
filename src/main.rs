@@ -1,4 +1,4 @@
-use pdbmol_ccd::data::Residue;
+use pdbmol_ccd::datatypes::Residue;
 use pdbmol_cif as cif;
 use std::{collections::HashMap, env, error::Error, fs, path::Path};
 
@@ -13,7 +13,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         match cif_parsed {
             Ok(d) => {
-                println!("{:#?}", d);
                 let res = Residue::try_from(&d.into_iter().next().ok_or("no datablock")?.1);
                 println!("{:#?}", res);
             }

@@ -5,7 +5,10 @@ edition = "2021"
 
 [dependencies]
 pdbmol_ccdparse = { path = "../pdbmol_ccdparse" }
+phf = { version = "0.11.1", default-features = false }
 
 [build-dependencies]
 phf = { version = "0.11.1", default-features = false }
 phf_codegen = "0.11.1"
+pdbmol_cif = { path = "../pdbmol_cif" }
+pdbmol_ccdparse = { path = "../pdbmol_ccdparse" }
