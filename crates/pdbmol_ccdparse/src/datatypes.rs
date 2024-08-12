@@ -124,21 +124,11 @@ impl<'s> TryFrom<&ParsedDataBlock<'s>> for Residue<'s> {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum AtomStereo {
     R,
     S,
     None,
-}
-
-impl Debug for AtomStereo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::R => write!(f, "AtomStereo::R"),
-            Self::S => write!(f, "AtomStereo::S"),
-            Self::None => write!(f, "AtomStereo::None"),
-        }
-    }
 }
 
 impl FromStr for AtomStereo {
@@ -154,7 +144,7 @@ impl FromStr for AtomStereo {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Atoms<'s> {
     atom_id: Vec<&'s str>,
     symbol: Vec<&'s str>,
@@ -165,6 +155,37 @@ pub struct Atoms<'s> {
     x: Vec<Option<f32>>,
     y: Vec<Option<f32>>,
     z: Vec<Option<f32>>,
+}
+
+impl<'s> Debug for Atoms<'s> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if f.alternate() {
+            writeln!(f, "Atoms {{")?;
+            writeln!(f, "    atom_id: {:?},", self.atom_id)?;
+            writeln!(f, "    symbol: {:?},", self.symbol)?;
+            writeln!(f, "    charge: {:?},", self.charge)?;
+            writeln!(f, "    aromatic: {:?},", self.aromatic)?;
+            writeln!(f, "    leaving: {:?},", self.leaving)?;
+            writeln!(f, "    stereo: {:?},", self.stereo)?;
+            writeln!(f, "    x: {:?},", self.x)?;
+            writeln!(f, "    y: {:?},", self.y)?;
+            writeln!(f, "    z: {:?},", self.z)?;
+            writeln!(f, "}}")?;
+        } else {
+            write!(f, "Atoms {{")?;
+            write!(f, " atom_id: {:?},", self.atom_id)?;
+            write!(f, " symbol: {:?},", self.symbol)?;
+            write!(f, " charge: {:?},", self.charge)?;
+            write!(f, " aromatic: {:?},", self.aromatic)?;
+            write!(f, " leaving: {:?},", self.leaving)?;
+            write!(f, " stereo: {:?},", self.stereo)?;
+            write!(f, " x: {:?},", self.x)?;
+            write!(f, " y: {:?},", self.y)?;
+            write!(f, " z: {:?},", self.z)?;
+            write!(f, "}}")?;
+        }
+        Ok(())
+    }
 }
 
 impl<'s> TryFrom<&HashMap<&'s str, Vec<&'s str>>> for Atoms<'s> {
@@ -281,21 +302,11 @@ fn try_as_bool(value: &str) -> Result<bool, String> {
     }
 }
 
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BondStereo {
     E,
     Z,
     None,
-}
-
-impl Debug for BondStereo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::E => write!(f, "BondStereo::E"),
-            Self::Z => write!(f, "BondStereo::Z"),
-            Self::None => write!(f, "BondStereo::None"),
-        }
-    }
 }
 
 impl FromStr for BondStereo {
@@ -341,13 +352,36 @@ impl Into<u8> for BondOrder {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Bonds<'s> {
     atom1: Vec<&'s str>,
     atom2: Vec<&'s str>,
     order: Vec<BondOrder>,
     aromatic: Vec<bool>,
     stereo: Vec<BondStereo>,
+}
+
+impl<'s> Debug for Bonds<'s> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if f.alternate() {
+            writeln!(f, "Bonds {{")?;
+            writeln!(f, "    atom1: {:?},", self.atom1)?;
+            writeln!(f, "    atom2: {:?},", self.atom2)?;
+            writeln!(f, "    order: {:?},", self.order)?;
+            writeln!(f, "    aromatic: {:?},", self.aromatic)?;
+            writeln!(f, "    stereo: {:?},", self.stereo)?;
+            write!(f, "}}")?;
+        } else {
+            write!(f, "Bonds {{")?;
+            write!(f, " atom1: {:?},", self.atom1)?;
+            write!(f, " atom2: {:?},", self.atom2)?;
+            write!(f, " order: {:?},", self.order)?;
+            write!(f, " aromatic: {:?},", self.aromatic)?;
+            write!(f, " stereo: {:?},", self.stereo)?;
+            write!(f, "}}")?;
+        }
+        Ok(())
+    }
 }
 
 impl<'s> TryFrom<&HashMap<&'s str, Vec<&'s str>>> for Bonds<'s> {
