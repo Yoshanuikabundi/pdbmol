@@ -55,40 +55,66 @@ fn numeric<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
     Numeric::parser.map(Value::Numeric).parse_next(input)
 }
 
-/// This parser must only be called immediately after an EOL
-///
-/// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
-/// when followed by whitespace.
-pub fn eol_value<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
+fn eol_agnostic_value<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
     alt((
         terminated('.', peek(whitespace)).map(|_| Value::Inapplicable),
         terminated('?', peek(whitespace)).map(|_| Value::Unknown),
         terminated(numeric, peek(whitespace)),
-        eol_string.map(Value::String),
     ))
     .parse_next(input)
+}
+
+/// This parser must only be called immediately after an EOL
+///
+/// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
+/// when followed by whitespace.
+pub fn eol_value<'s>(input: &mut &'s str) -> PResult<&'s str> {
+    alt((eol_agnostic_value.take(), eol_string)).parse_next(input)
 }
 
 /// This parser must only be called immediately after a non-EOL character
 ///
 /// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
 /// when followed by whitespace.
-pub fn noteol_value<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
+pub fn noteol_value<'s>(input: &mut &'s str) -> PResult<&'s str> {
+    alt((eol_agnostic_value.take(), noteol_string)).parse_next(input)
+}
+
+/// This parser must only be called immediately after an EOL
+///
+/// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
+/// when followed by whitespace.
+fn eol_value_parsed<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
+    alt((eol_agnostic_value, eol_string.map(Value::String))).parse_next(input)
+}
+
+/// This parser must only be called immediately after a non-EOL character
+///
+/// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
+/// when followed by whitespace.
+fn noteol_value_parsed<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
+    alt((eol_agnostic_value, noteol_string.map(Value::String))).parse_next(input)
+}
+
+/// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
+/// when followed by whitespace.
+pub fn whitespace_value<'s>(input: &mut &'s str) -> PResult<&'s str> {
     alt((
-        terminated('.', peek(whitespace)).map(|_| Value::Inapplicable),
-        terminated('?', peek(whitespace)).map(|_| Value::Unknown),
-        terminated(numeric, peek(whitespace)),
-        noteol_string.map(Value::String),
+        preceded(whitespace.verify(|s: &str| s.ends_with('\n')), eol_value),
+        preceded(whitespace, noteol_value),
     ))
     .parse_next(input)
 }
 
 /// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
 /// when followed by whitespace.
-pub fn whitespace_value<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
+fn whitespace_value_parsed<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
     alt((
-        preceded(whitespace.verify(|s: &str| s.ends_with('\n')), eol_value),
-        preceded(whitespace, noteol_value),
+        preceded(
+            whitespace.verify(|s: &str| s.ends_with('\n')),
+            eol_value_parsed,
+        ),
+        preceded(whitespace, noteol_value_parsed),
     ))
     .parse_next(input)
 }
@@ -107,15 +133,15 @@ mod tests {
     #[test]
     fn test_eol_value() {
         let mut stream = "\n.";
-        let output = preceded(eol, eol_value).parse_next(&mut stream);
+        let output = preceded(eol, eol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::Inapplicable));
 
         let mut stream = "\n?";
-        let output = preceded(eol, eol_value).parse_next(&mut stream);
+        let output = preceded(eol, eol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::Unknown));
 
         let mut stream = "\n7.452323";
-        let output = preceded(eol, eol_value).parse_next(&mut stream);
+        let output = preceded(eol, eol_value_parsed).parse_next(&mut stream);
         assert_eq!(
             output,
             Ok(Value::Numeric(Numeric {
@@ -125,34 +151,34 @@ mod tests {
         );
 
         let mut stream = "\n'hello there'";
-        let output = preceded(eol, eol_value).parse_next(&mut stream);
+        let output = preceded(eol, eol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("hello there")));
 
         let mut stream = "\nUnquotedString";
-        let output = preceded(eol, eol_value).parse_next(&mut stream);
+        let output = preceded(eol, eol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("UnquotedString")));
 
         let mut stream = "\n.UnquotedString";
-        let output = preceded(eol, eol_value).parse_next(&mut stream);
+        let output = preceded(eol, eol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String(".UnquotedString")));
 
         let mut stream = "\n?UnquotedString";
-        let output = preceded(eol, eol_value).parse_next(&mut stream);
+        let output = preceded(eol, eol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("?UnquotedString")));
     }
 
     #[test]
     fn test_noteol_value() {
         let mut stream = " .";
-        let output = preceded(whitespace, noteol_value).parse_next(&mut stream);
+        let output = preceded(whitespace, noteol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::Inapplicable));
 
         let mut stream = " ?";
-        let output = preceded(whitespace, noteol_value).parse_next(&mut stream);
+        let output = preceded(whitespace, noteol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::Unknown));
 
         let mut stream = " 7.452323";
-        let output = preceded(whitespace, noteol_value).parse_next(&mut stream);
+        let output = preceded(whitespace, noteol_value_parsed).parse_next(&mut stream);
         assert_eq!(
             output,
             Ok(Value::Numeric(Numeric {
@@ -162,38 +188,38 @@ mod tests {
         );
 
         let mut stream = " 'hello there'";
-        let output = preceded(whitespace, noteol_value).parse_next(&mut stream);
+        let output = preceded(whitespace, noteol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("hello there")));
 
         let mut stream = " ;UnquotedString";
-        let output = preceded(whitespace, noteol_value).parse_next(&mut stream);
+        let output = preceded(whitespace, noteol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String(";UnquotedString")));
 
         let mut stream = " UnquotedString";
-        let output = preceded(whitespace, noteol_value).parse_next(&mut stream);
+        let output = preceded(whitespace, noteol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("UnquotedString")));
 
         let mut stream = " .UnquotedString";
-        let output = preceded(whitespace, noteol_value).parse_next(&mut stream);
+        let output = preceded(whitespace, noteol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String(".UnquotedString")));
 
         let mut stream = " ?UnquotedString";
-        let output = preceded(whitespace, noteol_value).parse_next(&mut stream);
+        let output = preceded(whitespace, noteol_value_parsed).parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("?UnquotedString")));
     }
 
     #[test]
     fn test_whitespace_value() {
         let mut stream = "\n.";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::Inapplicable));
 
         let mut stream = "\n?";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::Unknown));
 
         let mut stream = "\n7.452323";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(
             output,
             Ok(Value::Numeric(Numeric {
@@ -203,31 +229,31 @@ mod tests {
         );
 
         let mut stream = "\n'hello there'";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("hello there")));
 
         let mut stream = "\nUnquotedString";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("UnquotedString")));
 
         let mut stream = "\n.UnquotedString";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String(".UnquotedString")));
 
         let mut stream = "\n?UnquotedString";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("?UnquotedString")));
 
         let mut stream = " .";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::Inapplicable));
 
         let mut stream = " ?";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::Unknown));
 
         let mut stream = " 7.452323";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(
             output,
             Ok(Value::Numeric(Numeric {
@@ -237,27 +263,27 @@ mod tests {
         );
 
         let mut stream = " 'hello there'";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("hello there")));
 
         let mut stream = " UnquotedString";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("UnquotedString")));
 
         let mut stream = " .UnquotedString";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String(".UnquotedString")));
 
         let mut stream = " ?UnquotedString";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("?UnquotedString")));
 
         let mut stream = " ;UnquotedString";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String(";UnquotedString")));
 
         let mut stream = " 1999-07-08";
-        let output = whitespace_value.parse_next(&mut stream);
+        let output = whitespace_value_parsed.parse_next(&mut stream);
         assert_eq!(output, Ok(Value::String("1999-07-08")));
     }
 }

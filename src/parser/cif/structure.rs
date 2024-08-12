@@ -16,7 +16,7 @@ fn loop_header<'s>(input: &mut &'s str) -> PResult<Vec<&'s str>> {
         .parse_next(input)
 }
 
-fn data_items_loop<'s>(input: &mut &'s str) -> PResult<HashMap<&'s str, Vec<Value<'s>>>> {
+fn data_items_loop<'s>(input: &mut &'s str) -> PResult<HashMap<&'s str, Vec<&'s str>>> {
     let tags = loop_header.parse_next(input)?;
     repeat::<_, _, Vec<_>, _, _>(
         0..,
@@ -37,7 +37,7 @@ fn data_items_loop<'s>(input: &mut &'s str) -> PResult<HashMap<&'s str, Vec<Valu
     .parse_next(input)
 }
 
-fn data_items<'s>(input: &mut &'s str) -> PResult<HashMap<&'s str, Value<'s>>> {
+fn data_items<'s>(input: &mut &'s str) -> PResult<HashMap<&'s str, &'s str>> {
     separated::<_, _, Vec<_>, _, _, _, _>(1.., (tag, whitespace_value), whitespace)
         .map(HashMap::from_iter)
         .context(StrContext::Label("data items"))
@@ -69,9 +69,9 @@ fn datablock_heading<'s>(input: &mut &'s str) -> PResult<&'s str> {
 
 #[derive(Debug, Clone)]
 pub enum DataBlockItem<'s> {
-    DataItems(HashMap<&'s str, Value<'s>>),
-    Table(HashMap<&'s str, Vec<Value<'s>>>),
-    SaveFrame((&'s str, HashMap<&'s str, Value<'s>>)),
+    DataItems(HashMap<&'s str, &'s str>),
+    Table(HashMap<&'s str, Vec<&'s str>>),
+    SaveFrame((&'s str, HashMap<&'s str, &'s str>)),
 }
 
 fn datablock<'s>(input: &mut &'s str) -> PResult<(&'s str, Vec<DataBlockItem<'s>>)> {
@@ -146,37 +146,18 @@ mod tests {
             output,
             Ok(HashMap::from_iter(
                 [
-                    (
-                        "pdbx_chem_comp_audit.comp_id",
-                        vec![
-                            Value::String("PHE"),
-                            Value::String("PHE"),
-                            Value::String("PHE")
-                        ]
-                    ),
+                    ("pdbx_chem_comp_audit.comp_id", vec!["PHE", "PHE", "PHE"]),
                     (
                         "pdbx_chem_comp_audit.action_type",
-                        vec![
-                            Value::String("Create component"),
-                            Value::String("Modify descriptor"),
-                            Value::String("Modify backbone")
-                        ]
+                        vec!["Create component", "Modify descriptor", "Modify backbone"]
                     ),
                     (
                         "pdbx_chem_comp_audit.date",
-                        vec![
-                            Value::String("1999-07-08"),
-                            Value::String("2011-06-04"),
-                            Value::String("2023-11-03")
-                        ]
+                        vec!["1999-07-08", "2011-06-04", "2023-11-03"]
                     ),
                     (
                         "pdbx_chem_comp_audit.processing_site",
-                        vec![
-                            Value::String("EBI"),
-                            Value::String("RCSB"),
-                            Value::String("PDBE")
-                        ]
+                        vec!["EBI", "RCSB", "PDBE"]
                     )
                 ]
                 .into_iter()

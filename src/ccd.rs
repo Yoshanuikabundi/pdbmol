@@ -1,8 +1,8 @@
 //! https://mmcif.wwpdb.org/dictionaries/mmcif_pdbx_v50.dic/Categories/chem_comp.html
 
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
-use crate::parser::cif::{DataBlockItem, Value};
+use crate::parser::cif::{DataBlockItem, ParsedCif, ParsedDataBlock, Value};
 
 #[derive(Debug, Clone, PartialEq)]
 enum LinkingType {
@@ -37,10 +37,10 @@ enum LinkingType {
     Saccharide,
 }
 
-impl TryFrom<&str> for LinkingType {
-    type Error = String;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value.to_lowercase().as_str() {
+impl FromStr for LinkingType {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
             "d-beta-peptide, c-gamma linking" => Ok(Self::DBetaPeptideCGammaLinking),
             "d-gamma-peptide, c-delta linking" => Ok(Self::DGammaPeptideCDeltaLinking),
             "d-peptide cooh carboxy terminus" => Ok(Self::DPeptideCoohCarboxyTerminus),
@@ -70,7 +70,7 @@ impl TryFrom<&str> for LinkingType {
             "peptide linking" => Ok(Self::PeptideLinking),
             "peptide-like" => Ok(Self::PeptideLike),
             "saccharide" => Ok(Self::Saccharide),
-            s => Err(format!("{s} is not a string")),
+            s => Err(format!("{s} is not a known linking type")),
         }
     }
 }
@@ -116,16 +116,10 @@ impl<'s> TryFrom<&Vec<DataBlockItem<'s>>> for Residue<'s> {
 
         match value.get(0) {
             Some(DataBlockItem::DataItems(hash_map)) => Ok(Self {
-                id: hash_map.get("chem_comp.id").ok_or("no id")?.try_as_str()?,
-                name: hash_map
-                    .get("chem_comp.name")
-                    .ok_or("no name")?
-                    .try_as_str()?,
-                linking_type: LinkingType::try_from(
-                    hash_map
-                        .get("chem_comp.type")
-                        .ok_or("no type")?
-                        .try_as_str()?,
+                id: hash_map.get("chem_comp.id").ok_or("no id")?,
+                name: hash_map.get("chem_comp.name").ok_or("no name")?,
+                linking_type: LinkingType::from_str(
+                    hash_map.get("chem_comp.type").ok_or("no type")?,
                 )?,
                 atoms,
                 bonds,
@@ -136,6 +130,34 @@ impl<'s> TryFrom<&Vec<DataBlockItem<'s>>> for Residue<'s> {
     }
 }
 
+impl<'s> TryFrom<&ParsedDataBlock<'s>> for Residue<'s> {
+    type Error = String;
+
+    fn try_from(value: &ParsedDataBlock<'s>) -> Result<Self, Self::Error> {
+        Ok(Self {
+            id: value
+                .get("chem_comp.id")
+                .ok_or("no id")?
+                .get(0)
+                .ok_or("no id")?,
+            name: value
+                .get("chem_comp.name")
+                .ok_or("no name")?
+                .get(0)
+                .ok_or("no name")?,
+            linking_type: LinkingType::from_str(
+                value
+                    .get("chem_comp.type")
+                    .ok_or("no type")?
+                    .get(0)
+                    .ok_or("no type")?,
+            )?,
+            atoms: Atoms::try_from(value)?,
+            bonds: Bonds::try_from(value)?,
+        })
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 enum AtomStereo {
     R,
@@ -143,16 +165,15 @@ enum AtomStereo {
     None,
 }
 
-impl<'s> TryFrom<&Value<'s>> for AtomStereo {
-    type Error = String;
+impl FromStr for AtomStereo {
+    type Err = String;
 
-    fn try_from(value: &Value) -> Result<Self, Self::Error> {
-        match value.try_as_str() {
-            Ok("R") => Ok(Self::R),
-            Ok("S") => Ok(Self::S),
-            Ok("N") => Ok(Self::None),
-            Ok(s) => Err(format!("AtomStereo should be R, S or N, not {s}")),
-            Err(e) => Err(e.to_string()),
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "R" => Ok(Self::R),
+            "S" => Ok(Self::S),
+            "N" => Ok(Self::None),
+            s => Err(format!("AtomStereo should be R, S or N, not {s}")),
         }
     }
 }
@@ -161,93 +182,126 @@ impl<'s> TryFrom<&Value<'s>> for AtomStereo {
 struct Atoms<'s> {
     atom_id: Vec<&'s str>,
     symbol: Vec<&'s str>,
-    charge: Vec<i32>,
+    charge: Vec<Option<i32>>,
     aromatic: Vec<bool>,
     leaving: Vec<bool>,
     stereo: Vec<AtomStereo>,
-    x: Vec<f32>,
-    y: Vec<f32>,
-    z: Vec<f32>,
+    x: Vec<Option<f32>>,
+    y: Vec<Option<f32>>,
+    z: Vec<Option<f32>>,
 }
 
-impl<'s> TryFrom<&HashMap<&'s str, Vec<Value<'s>>>> for Atoms<'s> {
+impl<'s> TryFrom<&HashMap<&'s str, Vec<&'s str>>> for Atoms<'s> {
     type Error = String;
 
-    fn try_from(value: &HashMap<&'s str, Vec<Value<'s>>>) -> Result<Self, Self::Error> {
+    fn try_from(value: &HashMap<&'s str, Vec<&'s str>>) -> Result<Self, Self::Error> {
+        let (x, y, z) = get_xyz(value)?;
         Ok(Self {
             atom_id: value
                 .get("chem_comp_atom.atom_id")
                 .ok_or("no atom ids")?
-                .iter()
-                .map(Value::try_as_str)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("id of {value:?} shat the bed: {e}"))?,
+                .clone(),
             symbol: value
                 .get("chem_comp_atom.type_symbol")
                 .ok_or("no element symbols")?
-                .iter()
-                .map(Value::try_as_str)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("symbol of {value:?} shat the bed: {e}"))?,
+                .clone(),
             charge: value
                 .get("chem_comp_atom.charge")
                 .ok_or("no formal charges")?
                 .iter()
-                .map(Value::try_as_int)
+                .cloned()
+                .map(|s| match s {
+                    "?" => Ok(None),
+                    s => s.parse().map(Some),
+                })
                 .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("charge of {value:?} shat the bed: {e}"))?,
+                .map_err(|e| format!("charge of {value:?} failed to parse: {e}"))?,
             aromatic: value
                 .get("chem_comp_atom.pdbx_aromatic_flag")
                 .ok_or("no atom aromatic flags")?
                 .iter()
+                .cloned()
                 .map(try_as_bool)
                 .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("aromatic of {value:?} shat the bed: {e}"))?,
+                .map_err(|e| format!("aromatic of {value:?} failed to parse: {e}"))?,
             leaving: value
                 .get("chem_comp_atom.pdbx_leaving_atom_flag")
                 .ok_or("no leaving flags")?
                 .iter()
+                .cloned()
                 .map(try_as_bool)
                 .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("leaving of {value:?} shat the bed: {e}"))?,
+                .map_err(|e| format!("leaving of {value:?} failed to parse: {e}"))?,
             stereo: value
                 .get("chem_comp_atom.pdbx_stereo_config")
                 .ok_or("no atom stereo flags")?
                 .iter()
-                .map(AtomStereo::try_from)
+                .map(|&s| s.parse())
                 .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("stereo of {value:?} shat the bed: {e}"))?,
-            x: value
-                .get("chem_comp_atom.pdbx_model_Cartn_x_ideal")
-                .ok_or("no ideal x values")?
-                .iter()
-                .map(Value::try_as_float)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("x of {value:?} shat the bed: {e}"))?,
-            y: value
-                .get("chem_comp_atom.pdbx_model_Cartn_y_ideal")
-                .ok_or("no ideal y values")?
-                .iter()
-                .map(Value::try_as_float)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("y of {value:?} shat the bed: {e}"))?,
-            z: value
-                .get("chem_comp_atom.pdbx_model_Cartn_z_ideal")
-                .ok_or("no ideal z values")?
-                .iter()
-                .map(Value::try_as_float)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("z of {value:?} shat the bed: {e}"))?,
+                .map_err(|e| format!("stereo of {value:?} failed to parse: {e}"))?,
+            x,
+            y,
+            z,
         })
     }
 }
 
-fn try_as_bool(value: &Value) -> Result<bool, String> {
-    match value.try_as_str() {
-        Ok("Y") => Ok(true),
-        Ok("N") => Ok(false),
-        Ok(s) => Err(format!("bool should be Y or N, not {s}")),
-        Err(e) => Err(e.to_string()),
+fn get_coords_with_key(
+    map: &HashMap<&str, Vec<&str>>,
+    key: &str,
+) -> Result<Vec<Option<f32>>, String> {
+    Ok(map
+        .get(key)
+        .ok_or(format!("no values for {key}"))?
+        .iter()
+        .cloned()
+        .map(|s| match s {
+            "?" => Ok(None),
+            s => s.parse().map(Some),
+        })
+        .collect::<Result<Vec<Option<f32>>, _>>()
+        .map_err(|e| format!("{key} failed to parse: {e}"))?)
+}
+
+/// Get the coordinates from a CCD datablock
+///
+/// Chooses between `"chem_comp_atom.model_Cartn_{xyz}"` and
+/// `"chem_comp_atom.pdbx_model_Cartn_{xyz}_ideal"` depending on which provides
+/// the "better" set of values.
+fn get_xyz(
+    map: &HashMap<&str, Vec<&str>>,
+) -> Result<(Vec<Option<f32>>, Vec<Option<f32>>, Vec<Option<f32>>), String> {
+    let x1 = get_coords_with_key(map, "chem_comp_atom.model_Cartn_x");
+    let x2 = get_coords_with_key(map, "chem_comp_atom.pdbx_model_Cartn_x_ideal");
+    let y1 = get_coords_with_key(map, "chem_comp_atom.model_Cartn_y");
+    let y2 = get_coords_with_key(map, "chem_comp_atom.pdbx_model_Cartn_y_ideal");
+    let z1 = get_coords_with_key(map, "chem_comp_atom.model_Cartn_z");
+    let z2 = get_coords_with_key(map, "chem_comp_atom.pdbx_model_Cartn_z_ideal");
+    match (x1, y1, z1, x2, y2, z2) {
+        (Ok(x1), Ok(y1), Ok(z1), Ok(x2), Ok(y2), Ok(z2)) => {
+            let x1_count = x1.iter().filter(|o| o.is_some()).count();
+            let x2_count = x2.iter().filter(|o| o.is_some()).count();
+            let y1_count = y1.iter().filter(|o| o.is_some()).count();
+            let y2_count = y2.iter().filter(|o| o.is_some()).count();
+            let z1_count = z1.iter().filter(|o| o.is_some()).count();
+            let z2_count = z2.iter().filter(|o| o.is_some()).count();
+            if x1_count.min(y1_count).min(z1_count) > x2_count.min(y2_count).min(z2_count) {
+                Ok((x1, y1, z1))
+            } else {
+                Ok((x2, y2, z2))
+            }
+        }
+        (Ok(x), Ok(y), Ok(z), _, _, _) | (_, _, _, Ok(x), Ok(y), Ok(z)) => Ok((x, y, z)),
+        (Err(_), Err(_), Err(_), Err(_), Err(_), Err(_)) => Err("No coordinates".into()),
+        _ => Err("Coordinates have fewer than 3 dimensions".into()),
+    }
+}
+
+fn try_as_bool(value: &str) -> Result<bool, String> {
+    match value {
+        "Y" => Ok(true),
+        "N" => Ok(false),
+        s => Err(format!("bool should be Y or N, not {s}")),
     }
 }
 
@@ -258,16 +312,15 @@ enum BondStereo {
     None,
 }
 
-impl<'s> TryFrom<&Value<'s>> for BondStereo {
-    type Error = String;
+impl FromStr for BondStereo {
+    type Err = String;
 
-    fn try_from(value: &Value) -> Result<Self, Self::Error> {
-        match value.try_as_str() {
-            Ok("E") => Ok(Self::E),
-            Ok("Z") => Ok(Self::Z),
-            Ok("N") => Ok(Self::None),
-            Ok(s) => Err(format!("BondStereo should be E, Z or N, not {s}")),
-            Err(e) => Err(e.to_string()),
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "E" => Ok(Self::E),
+            "Z" => Ok(Self::Z),
+            "N" => Ok(Self::None),
+            s => Err(format!("BondStereo should be E, Z or N, not {s}")),
         }
     }
 }
@@ -277,20 +330,27 @@ enum BondOrder {
     Single,
     Double,
     Triple,
-    Quadruple,
 }
 
-impl<'s> TryFrom<&Value<'s>> for BondOrder {
-    type Error = String;
+impl FromStr for BondOrder {
+    type Err = String;
 
-    fn try_from(value: &Value) -> Result<Self, Self::Error> {
-        match value.try_as_str() {
-            Ok("SING") => Ok(Self::Single),
-            Ok("DOUB") => Ok(Self::Double),
-            Ok("TRIP") => Ok(Self::Triple),
-            Ok("QUAD") => Ok(Self::Quadruple),
-            Ok(s) => Err(format!("Unknown bond order {s}")),
-            Err(e) => Err(e.to_string()),
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "SING" => Ok(Self::Single),
+            "DOUB" => Ok(Self::Double),
+            "TRIP" => Ok(Self::Triple),
+            s => Err(format!("Unknown bond order {s}")),
+        }
+    }
+}
+
+impl Into<u8> for BondOrder {
+    fn into(self) -> u8 {
+        match self {
+            Self::Single => 1,
+            Self::Double => 2,
+            Self::Triple => 3,
         }
     }
 }
@@ -304,46 +364,43 @@ struct Bonds<'s> {
     stereo: Vec<BondStereo>,
 }
 
-impl<'s> TryFrom<&HashMap<&'s str, Vec<Value<'s>>>> for Bonds<'s> {
+impl<'s> TryFrom<&HashMap<&'s str, Vec<&'s str>>> for Bonds<'s> {
     type Error = String;
 
-    fn try_from(value: &HashMap<&'s str, Vec<Value<'s>>>) -> Result<Self, Self::Error> {
+    fn try_from(value: &HashMap<&'s str, Vec<&'s str>>) -> Result<Self, Self::Error> {
         Ok(Self {
             atom1: value
                 .get("chem_comp_bond.atom_id_1")
-                .ok_or("no atom1 ids")?
-                .iter()
-                .map(Value::try_as_str)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("bond atom1 of {value:?} shat the bed: {e}"))?,
+                .unwrap_or(&Vec::new())
+                .clone(),
             atom2: value
                 .get("chem_comp_bond.atom_id_2")
-                .ok_or("no atom2 ids")?
-                .iter()
-                .map(Value::try_as_str)
-                .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("bond atom2 of {value:?} shat the bed: {e}"))?,
+                .unwrap_or(&Vec::new())
+                .clone(),
             order: value
                 .get("chem_comp_bond.value_order")
-                .ok_or("no bond orders")?
+                .unwrap_or(&Vec::new())
                 .iter()
-                .map(BondOrder::try_from)
+                .cloned()
+                .map(str::parse)
                 .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("bond order of {value:?} shat the bed: {e}"))?,
+                .map_err(|e| format!("bond order of {value:?} failed to parse: {e}"))?,
             aromatic: value
                 .get("chem_comp_bond.pdbx_aromatic_flag")
-                .ok_or("no bond aromatic flags")?
+                .unwrap_or(&Vec::new())
                 .iter()
+                .cloned()
                 .map(try_as_bool)
                 .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("bond aromatic of {value:?} shat the bed: {e}"))?,
+                .map_err(|e| format!("bond aromatic of {value:?} failed to parse: {e}"))?,
             stereo: value
                 .get("chem_comp_bond.pdbx_stereo_config")
-                .ok_or("no bond stereo flags")?
+                .unwrap_or(&Vec::new())
                 .iter()
-                .map(BondStereo::try_from)
+                .cloned()
+                .map(str::parse)
                 .collect::<Result<Vec<_>, _>>()
-                .map_err(|e| format!("bond stereo of {value:?} shat the bed: {e}"))?,
+                .map_err(|e| format!("bond stereo of {value:?} failed to parse: {e}"))?,
         })
     }
 }
