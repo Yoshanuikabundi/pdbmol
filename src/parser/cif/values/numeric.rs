@@ -11,7 +11,7 @@ fn unsigned_integer(input: &mut &str) -> PResult<UnsignedInteger> {
     digit1.parse_to().parse_next(input)
 }
 
-type Integer = i32;
+pub type Integer = i32;
 
 fn integer(input: &mut &str) -> PResult<Integer> {
     (opt(one_of(('+', '-'))), unsigned_integer)
@@ -26,7 +26,7 @@ fn exponent<'s>(input: &mut &'s str) -> PResult<&'s str> {
         .parse_next(input)
 }
 
-type Float = f64;
+pub type Float = f32;
 
 fn float(input: &mut &str) -> PResult<Float> {
     alt((

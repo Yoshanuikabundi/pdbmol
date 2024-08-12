@@ -1,5 +1,6 @@
 mod numeric;
 mod strings;
+use numeric::Number;
 pub use numeric::Numeric;
 use strings::*;
 use winnow::combinator::{alt, peek, preceded, terminated};
@@ -9,12 +10,45 @@ use super::charsets::nonblank1;
 use super::whitespace_and_comments::whitespace;
 
 // TODO: Split Numeric into uint/int/float here
+// TODO: Store all values as strings and let the schema decode type
 #[derive(Clone, Debug, PartialEq)]
 pub enum Value<'a> {
     Numeric(Numeric),
     String(&'a str),
     Inapplicable,
     Unknown,
+}
+
+impl<'a> Value<'a> {
+    /// Get the value if it is a string
+    pub fn try_as_str(&self) -> Result<&'a str, &'static str> {
+        match self {
+            Self::String(s) => Ok(s),
+            _ => Err("Not a string"),
+        }
+    }
+
+    /// Get the value if it is an integer
+    pub fn try_as_int(&self) -> Result<numeric::Integer, &'static str> {
+        match self {
+            Self::Numeric(Numeric {
+                value: Number::Int(i),
+                esd: None,
+            }) => Ok(*i),
+            _ => Err("Not an int"),
+        }
+    }
+
+    /// Get the value if it is an integer
+    pub fn try_as_float(&self) -> Result<numeric::Float, &'static str> {
+        match self {
+            Self::Numeric(Numeric {
+                value: Number::Float(i),
+                esd: None,
+            }) => Ok(*i),
+            _ => Err("Not a float"),
+        }
+    }
 }
 
 fn numeric<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
