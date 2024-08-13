@@ -49,7 +49,11 @@ impl<S: Display> Display for AtomRecord<S> {
             std::cmp::Ordering::Greater => format!("{charge}+"),
         };
         let name = format!("{name: <3}");
-        write!(f, "{serial: >5} {name: >4}{alt_loc}{res_name: >3} {chain_id}{res_seq: >4}{i_code}   {x: >8.3}{y: >8.3}{z: >8.3}{occupancy: >6.2}{temp_factor: >6.2}          {element: >2}{charge: >2}")
+        write!(f, "{serial: >5} {name: >4}{alt_loc}{res_name: >3} ")?;
+        write!(f, "{chain_id}{res_seq: >4}{i_code}   ")?;
+        write!(f, "{x: >8.3}{y: >8.3}{z: >8.3}")?;
+        write!(f, "{occupancy: >6.2}{temp_factor: >6.2}          ")?;
+        write!(f, "{element: >2}{charge: >2}")
     }
 }
 
@@ -93,115 +97,131 @@ impl AtomRecord<&str> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum PdbRecord<S = String> {
-    /// First line of the entry, contains PDB ID code, classification, and date of deposition.
+    /// First line of the entry including entry-wide metadata.
     ///
-    /// Mandatory.
+    /// Contains PDB ID code, classification, and date of deposition.
+    ///
+    /// Mandatory in deposited files.
     Header,
-    /// Statement that the entry has been removed from distribution and list of the ID code(s) which replaced it.
+    /// List of ID codes that have obsoleted this entry.
     ///
-    /// Optional, mandatory in entries that have been replaced by a newer entry.
+    /// OBSLTE records indicate that the PDB entry has been removed from
+    /// distribution and provide a list of the ID code(s) which replaced it.
+    ///
+    /// Optional in deposited files, mandatory in entries that have been
+    /// replaced by a newer entry.
     Obslte,
     /// Description of the experiment represented in the entry.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     Title,
     /// List of PDB entries that compose a larger macromolecular complexes.
     ///
-    /// Optional, mandatory when large macromolecular complexes are split into multiple PDB entries.
+    /// Optional in deposited files, mandatory when large macromolecular
+    /// complexes are split into multiple PDB entries.
     Split,
     /// Severe error indicator.
     ///
-    /// Optional, mandatory when there are outstanding errors such as chirality.
+    /// Optional in deposited files, mandatory when there are outstanding errors
+    /// such as chirality.
     Caveat,
     /// Description of macromolecular contents of the entry.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     Compnd,
     /// Biological source of macromolecules in the entry.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     Source,
     /// List of keywords describing the macromolecule.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     Keywds,
     /// Experimental technique used for the structure determination.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     ExpDta,
     /// Number of models.
     ///
-    /// Optional, mandatory for NMR ensemble entries.
+    /// Optional in deposited files, mandatory for NMR ensemble entries.
     NumMdl,
-    /// Contains additional annotation pertinent to the coordinates presented in the entry.
+    /// Describes which coordinates are included in the entry's model.
     ///
-    /// Optional, mandatory for NMR minimized average Structures or when the entire polymer chain contains C alpha or P atoms only.
+    /// Optional in deposited files, mandatory for NMR minimized average
+    /// structures or when the entire polymer chain contains C alpha or P atoms
+    /// only.
     MdlTyp,
     /// List of contributors.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     Author,
     /// Revision date and related information.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     RevDat,
-    /// List of entries obsoleted from public release and superseded by current entry.
+    /// List of entries obsoleted from public release and superseded by current
+    /// entry.
     ///
-    /// Optional, mandatory for a replacement entry.
+    /// Optional in deposited files, mandatory for a replacement entry.
     Sprsde,
     /// Literature citation that defines the coordinate set.
     ///
-    /// Optional, mandatory for a publication describes the experiment.
+    /// Optional in deposited files, mandatory for a publication describes the
+    /// experiment.
     Jrnl,
     /// General remarks; they can be structured or free form.
     ///
-    /// Optional.
+    /// Optional in deposited files.
     Remark { remark_num: i16, remark: S },
     /// Reference to the entry in the sequence database(s).
     ///
     /// Split into DBREF1 and DBREF2 when accession IDs don't fit on one line.
     ///
-    /// Optional, mandatory for all polymers.
+    /// Optional in deposited files, mandatory for all polymers.
     DbRef,
     /// Identification of conflicts between PDB and the named sequence database.
     ///
-    /// Optional, mandatory if sequence conflict exists.
+    /// Optional in deposited files, mandatory if sequence conflict exists.
     SeqAdv,
     /// Primary sequence of backbone residues.
     ///
-    /// Mandatory, Mandatory if ATOM records exist.
+    /// Mandatory in deposited files, Mandatory if ATOM records exist.
     SeqRes { chain_id: char, res_names: Vec<S> },
     /// Identification of modifications to standard residues.
     ///
-    /// Optional, mandatory if modified group exists in the coordinates.
+    /// Optional in deposited files, mandatory if modified group exists in the
+    /// coordinates.
     ModRes,
     /// Identification of non-standard groups heterogens).
     ///
-    /// Optional, mandatory if a non-standard group other than water appears in the coordinates.
+    /// Optional in deposited files, mandatory if a non-standard group other
+    /// than water appears in the coordinates.
     Het,
     /// Compound name of the heterogens.
     ///
-    /// Optional, mandatory if a non-standard group other than water appears in the coordinates.
+    /// Optional in deposited files, mandatory if a non-standard group other
+    /// than water appears in the coordinates.
     HetNam,
     /// Synonymous compound names for heterogens.
     ///
-    /// Optional.
+    /// Optional in deposited files.
     HetSyn,
     /// Chemical formula of non-standard groups.
     ///
-    /// Optional, mandatory if a non-standard group or water appears in the coordinates.
+    /// Optional in deposited files, mandatory if a non-standard group or water
+    /// appears in the coordinates.
     Formul,
     /// Identification of helical substructures.
     ///
-    /// Optional.
+    /// Optional in deposited files.
     Helix,
     /// Identification of sheet substructures.
     ///
-    /// Optional.
+    /// Optional in deposited files.
     Sheet,
     /// Identification of disulfide bonds.
     ///
-    /// Optional, mandatory if a disulfide bond is present.
+    /// Optional in deposited files, mandatory if a disulfide bond is present.
     SsBond {
         serial_number: i16,
         res_name1: S,
@@ -218,19 +238,20 @@ pub enum PdbRecord<S = String> {
     },
     /// Identification of inter-residue bonds.
     ///
-    /// Optional, mandatory if non-standard residues appear in a polymer
+    /// Optional in deposited files, mandatory if non-standard residues appear
+    /// in a polymer
     Link,
     /// Identification of peptide residues in cis conformation.
     ///
-    /// Optional.
+    /// Optional in deposited files.
     CisPep,
     /// Identification of groups comprising important entity sites.
     ///
-    /// Optional.
+    /// Optional in deposited files.
     Site,
     /// Unit cell parameters, space group, and Z.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     Cryst1 {
         a: f32,
         b: f32,
@@ -241,35 +262,44 @@ pub enum PdbRecord<S = String> {
         space_group: S,
         z: i16,
     },
-    /// Transformation from orthogonal coordinates to the submitted coordinates (N = 1, 2, or 3).
+    /// Transformation from orthogonal coordinates to the submitted coordinates
     ///
-    /// Mandatory.
+    /// N may be 1, 2, or 3; all three records are required.
+    ///
+    /// Mandatory in deposited files.
     OrigXN,
-    /// Transformation from orthogonal coordinates to fractional crystallographic coordinates (N = 1, 2, or 3).
+    /// Transformation from orthogonal coordinates to fractional crystallographic coordinates
     ///
-    /// Mandatory.
+    /// N may be 1, 2, or 3; all three records are required.
+    ///
+    /// Mandatory in deposited files.
     ScaleN,
-    /// Transformations expressing non-crystallographic symmetry (N = 1, 2, or 3).
+    /// Transformations expressing non-crystallographic symmetry.
+    ///
+    /// N may be 1, 2, or 3; all three records are required.
     ///
     /// There may be multiple sets of these records.
     ///
-    /// Optional, mandatory if the complete asymmetric unit must be generated from the given coordinates using non-crystallographic symmetry.
+    /// Optional in deposited files, mandatory if the complete asymmetric unit
+    /// must be generated from the given coordinates using non-crystallographic
+    /// symmetry.
     MtrixN,
     /// Specification of model number for multiple structures in a single coordinate entry.
     ///
-    /// Optional, mandatory if more than one model is present in the entry.
+    /// Optional in deposited files, mandatory if more than one model is present
+    /// in the entry.
     Model(usize),
     /// Atomic coordinate records for standard groups.
     ///
-    /// Optional, mandatory if standard residues exist.
+    /// Optional in deposited files, mandatory if standard residues exist.
     Atom(AtomRecord<S>),
     /// Anisotropic temperature factors.
     ///
-    /// Optional.
+    /// Optional in deposited files.
     AnisoU,
     /// Chain terminator.
     ///
-    /// Optional, mandatory if ATOM records exist.
+    /// Optional in deposited files, mandatory if ATOM records exist.
     Ter {
         serial: i32,
         res_name: S,
@@ -279,23 +309,24 @@ pub enum PdbRecord<S = String> {
     },
     /// Atomic coordinate records for heterogens.
     ///
-    /// Optional, mandatory if non-standard group exists.
+    /// Optional in deposited files, mandatory if non-standard group exists.
     HetAtm(AtomRecord<S>),
     /// End-of-model record for multiple structures in a single coordinate entry.
     ///
-    /// Optional, mandatory if MODEL appears.
+    /// Optional in deposited files, mandatory if MODEL appears.
     EndMdl,
     /// Connectivity records.
     ///
-    /// Optional, mandatory if non-standard group appears and if LINK or SSBOND records exist.
+    /// Optional in deposited files, mandatory if non-standard group appears and
+    /// if LINK or SSBOND records exist.
     Conect { parent: S, bonds: Vec<S> },
     /// Control record for bookkeeping.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     Master,
     /// Last record in the file.
     ///
-    /// Mandatory.
+    /// Mandatory in deposited files.
     End,
 }
 
@@ -344,14 +375,14 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
             } => {
                 let num_res = res_names.len();
                 for (i, chunk) in res_names.chunks(13).enumerate() {
-                    write!(f, "SEQRES {: >3} {chain_id} {num_res: >4} ", i+1)?;
+                    write!(f, "SEQRES {: >3} {chain_id} {num_res: >4} ", i + 1)?;
                     for res_name in chunk {
                         write!(f, " {res_name: >3}")?;
                     }
                     writeln!(f, "")?;
-                };
+                }
                 Ok(())
-            },
+            }
             PdbRecord::SsBond {
                 serial_number,
                 res_name1,
@@ -365,7 +396,13 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
                 symmetry_op1,
                 symmetry_op2,
                 length,
-            } => writeln!(f, "SSBOND {serial_number: >3} {res_name1: >3} {chain_id1} {res_seq1: >4}{i_code1}   {res_name2: >3} {chain_id2} {res_seq2: >4}{i_code2}                       {symmetry_op1} {symmetry_op2} {length: >5.2}"),
+            } => {
+                write!(f, "SSBOND {serial_number: >3} {res_name1: >3}")?;
+                write!(f, " {chain_id1} {res_seq1: >4}{i_code1}   ")?;
+                write!(f, "{res_name2: >3} {chain_id2} {res_seq2: >4}")?;
+                write!(f, "{i_code2}                       ")?;
+                writeln!(f, "{symmetry_op1} {symmetry_op2} {length: >5.2}")
+            }
             PdbRecord::Cryst1 {
                 a,
                 b,
@@ -375,24 +412,37 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
                 gamma,
                 space_group,
                 z,
-            } => writeln!(f, "CRYST1{a: >9.3}{b: >9.3}{c: >9.3}{alpha: >7.2}{beta: >7.2}{gamma: >7.2} {space_group}{z: >4}"),
+            } => {
+                write!(f, "CRYST1{a: >9.3}{b: >9.3}{c: >9.3}")?;
+                write!(f, "{alpha: >7.2}{beta: >7.2}{gamma: >7.2} ")?;
+                writeln!(f, "{space_group}{z: >4}")
+            }
             PdbRecord::Model(i) => writeln!(f, "MODEL     {i: >4}"),
             PdbRecord::Atom(record) => writeln!(f, "ATOM  {record}"),
             PdbRecord::HetAtm(record) => writeln!(f, "HETATM{record}"),
-            PdbRecord::Ter { serial, res_name, chain_id, res_seq, i_code } => {
-                writeln!(f, "TER   {serial: >5}      {res_name: >3} {chain_id}{res_seq: >4}{i_code}")
-            },
-            PdbRecord::EndMdl => writeln!(f, "ENDMDL"),
-            PdbRecord::Conect {
-                parent,
-                bonds,
+            PdbRecord::Ter {
+                serial,
+                res_name,
+                chain_id,
+                res_seq,
+                i_code,
             } => {
+                writeln!(
+                    f,
+                    "TER   {serial: >5}      {res_name: >3} {chain_id}{res_seq: >4}{i_code}"
+                )
+            }
+            PdbRecord::EndMdl => writeln!(f, "ENDMDL"),
+            PdbRecord::Conect { parent, bonds } => {
                 let bond1 = bonds.get(0).cloned().unwrap_or_default();
                 let bond2 = bonds.get(1).cloned().unwrap_or_default();
                 let bond3 = bonds.get(2).cloned().unwrap_or_default();
                 let bond4 = bonds.get(3).cloned().unwrap_or_default();
-                writeln!(f, "CONECT{parent: >5}{bond1: >5}{bond2: >5}{bond3: >5}{bond4: >5}")
-            },
+                writeln!(
+                    f,
+                    "CONECT{parent: >5}{bond1: >5}{bond2: >5}{bond3: >5}{bond4: >5}"
+                )
+            }
         }
     }
 }
