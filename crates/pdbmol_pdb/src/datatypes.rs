@@ -203,7 +203,20 @@ pub enum PdbRecord<S = String> {
     /// Identification of disulfide bonds.
     ///
     /// Optional, mandatory if a disulfide bond is present.
-    SsBond,
+    SsBond {
+        serial_number: i16,
+        res_name1: S,
+        chain_id1: char,
+        res_seq1: i32,
+        i_code1: char,
+        res_name2: S,
+        chain_id2: char,
+        res_seq2: i32,
+        i_code2: char,
+        symmetry_op1: S,
+        symmetry_op2: S,
+        length: f32,
+    },
     /// Identification of inter-residue bonds.
     ///
     /// Optional, mandatory if non-standard residues appear in a polymer
@@ -276,13 +289,7 @@ pub enum PdbRecord<S = String> {
     /// Connectivity records.
     ///
     /// Optional, mandatory if non-standard group appears and if LINK or SSBOND records exist.
-    Conect {
-        parent: S,
-        bond1: Option<S>,
-        bond2: Option<S>,
-        bond3: Option<S>,
-        bond4: Option<S>,
-    },
+    Conect { parent: S, bonds: Vec<S> },
     /// Control record for bookkeeping.
     ///
     /// Mandatory.
@@ -320,7 +327,6 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
             | PdbRecord::Formul
             | PdbRecord::Helix
             | PdbRecord::Sheet
-            | PdbRecord::SsBond
             | PdbRecord::Link
             | PdbRecord::CisPep
             | PdbRecord::Site
@@ -347,6 +353,20 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
                 };
                 Ok(())
             },
+            PdbRecord::SsBond {
+                serial_number,
+                res_name1,
+                chain_id1,
+                res_seq1,
+                i_code1,
+                res_name2,
+                chain_id2,
+                res_seq2,
+                i_code2,
+                symmetry_op1,
+                symmetry_op2,
+                length,
+            } => writeln!(f, "SSBOND {serial_number: >3} {res_name1: >3} {chain_id1} {res_seq1: >4}{i_code1}   {res_name2: >3} {chain_id2} {res_seq2: >4}{i_code2}                       {symmetry_op1} {symmetry_op2} {length: >5.2}"),
             PdbRecord::Cryst1 {
                 a,
                 b,
@@ -366,15 +386,12 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
             PdbRecord::EndMdl => writeln!(f, "ENDMDL"),
             PdbRecord::Conect {
                 parent,
-                bond1,
-                bond2,
-                bond3,
-                bond4,
+                bonds,
             } => {
-                let bond1 = bond1.clone().unwrap_or_default();
-                let bond2 = bond2.clone().unwrap_or_default();
-                let bond3 = bond3.clone().unwrap_or_default();
-                let bond4 = bond4.clone().unwrap_or_default();
+                let bond1 = bonds.get(0).cloned().unwrap_or_default();
+                let bond2 = bonds.get(1).cloned().unwrap_or_default();
+                let bond3 = bonds.get(2).cloned().unwrap_or_default();
+                let bond4 = bonds.get(3).cloned().unwrap_or_default();
                 writeln!(f, "CONECT{parent: >5}{bond1: >5}{bond2: >5}{bond3: >5}{bond4: >5}")
             },
         }
@@ -410,7 +427,7 @@ impl Into<PdbRecord<String>> for PdbRecord<&str> {
                 res_names,
             } => PdbRecord::SeqRes {
                 chain_id: chain_id.to_owned(),
-                res_names: res_names.into_iter().map(|s| s.to_owned()).collect(),
+                res_names: res_names.into_iter().map(str::to_owned).collect(),
             },
             PdbRecord::ModRes => PdbRecord::ModRes,
             PdbRecord::Het => PdbRecord::Het,
@@ -419,7 +436,33 @@ impl Into<PdbRecord<String>> for PdbRecord<&str> {
             PdbRecord::Formul => PdbRecord::Formul,
             PdbRecord::Helix => PdbRecord::Helix,
             PdbRecord::Sheet => PdbRecord::Sheet,
-            PdbRecord::SsBond => PdbRecord::SsBond,
+            PdbRecord::SsBond {
+                serial_number,
+                res_name1,
+                chain_id1,
+                res_seq1,
+                i_code1,
+                res_name2,
+                chain_id2,
+                res_seq2,
+                i_code2,
+                symmetry_op1,
+                symmetry_op2,
+                length,
+            } => PdbRecord::SsBond {
+                serial_number,
+                res_name1: res_name1.to_owned(),
+                chain_id1,
+                res_seq1,
+                i_code1,
+                res_name2: res_name2.to_owned(),
+                chain_id2,
+                res_seq2,
+                i_code2,
+                symmetry_op1: symmetry_op1.to_owned(),
+                symmetry_op2: symmetry_op2.to_owned(),
+                length,
+            },
             PdbRecord::Link => PdbRecord::Link,
             PdbRecord::CisPep => PdbRecord::CisPep,
             PdbRecord::Site => PdbRecord::Site,
@@ -463,18 +506,9 @@ impl Into<PdbRecord<String>> for PdbRecord<&str> {
             },
             PdbRecord::HetAtm(record) => PdbRecord::HetAtm(record.to_owned()),
             PdbRecord::EndMdl => PdbRecord::EndMdl,
-            PdbRecord::Conect {
-                parent,
-                bond1,
-                bond2,
-                bond3,
-                bond4,
-            } => PdbRecord::Conect {
+            PdbRecord::Conect { parent, bonds } => PdbRecord::Conect {
                 parent: parent.to_owned(),
-                bond1: bond1.map(str::to_owned),
-                bond2: bond2.map(str::to_owned),
-                bond3: bond3.map(str::to_owned),
-                bond4: bond4.map(str::to_owned),
+                bonds: bonds.into_iter().map(str::to_owned).collect(),
             },
             PdbRecord::Master => PdbRecord::Master,
             PdbRecord::End => PdbRecord::End,
@@ -727,7 +761,20 @@ impl<'t> PdbRecordParser<'t> {
             "FORMUL" => Ok(PdbRecord::Formul),
             "HELIX " => Ok(PdbRecord::Helix),
             "SHEET " => Ok(PdbRecord::Sheet),
-            "SSBOND" => Ok(PdbRecord::SsBond),
+            "SSBOND" => Ok(PdbRecord::SsBond {
+                serial_number: self.try_parsed_field(7..=9)?,
+                res_name1: self.try_field(11..=13)?.trim(),
+                chain_id1: self.try_char_field(15)?,
+                res_seq1: self.try_parsed_field(17..=20)?,
+                i_code1: self.try_char_field(21)?,
+                res_name2: self.try_field(25..=27)?.trim(),
+                chain_id2: self.try_char_field(29)?,
+                res_seq2: self.try_parsed_field(31..=34)?,
+                i_code2: self.try_char_field(35)?,
+                symmetry_op1: self.try_field(59..=64)?,
+                symmetry_op2: self.try_field(66..=71)?,
+                length: self.try_parsed_field(73..=77)?,
+            }),
             "LINK  " => Ok(PdbRecord::Link),
             "CISPEP" => Ok(PdbRecord::CisPep),
             "SITE  " => Ok(PdbRecord::Site),
@@ -764,10 +811,9 @@ impl<'t> PdbRecordParser<'t> {
             "ENDMDL" => Ok(PdbRecord::EndMdl),
             "CONECT" => Ok(PdbRecord::Conect {
                 parent: self.try_field(6..=10)?.trim(),
-                bond1: self.get_field(11..=15),
-                bond2: self.get_field(16..=20),
-                bond3: self.get_field(21..=25),
-                bond4: self.get_field(26..=30),
+                bonds: self
+                    .split_current_line([11..=15, 16..=20, 21..=25, 26..=30])
+                    .collect(),
             }),
             "MASTER" => Ok(PdbRecord::Master),
             "END   " => Ok(PdbRecord::End),
