@@ -1,4 +1,4 @@
-//! https://mmcif.wwpdb.org/dictionaries/mmcif_pdbx_v50.dic/Categories/chem_comp.html
+//! <https://mmcif.wwpdb.org/dictionaries/mmcif_pdbx_v50.dic/Categories/chem_comp.html>
 
 use std::{collections::HashMap, fmt::Debug, str::FromStr};
 

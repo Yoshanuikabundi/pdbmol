@@ -45,6 +45,7 @@ version = "0.1.0"
 dependencies = [
  "pdbmol_ccd",
  "pdbmol_cif",
+ "pdbmol_data",
  "pdbmol_pdb",
 ]
 
