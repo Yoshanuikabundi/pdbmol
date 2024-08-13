@@ -97,129 +97,129 @@ pub enum PdbRecord<S = String> {
     /// First line of the entry, contains PDB ID code, classification, and date of deposition.
     ///
     /// Mandatory.
-    HEADER,
+    Header,
     /// Statement that the entry has been removed from distribution and list of the ID code(s) which replaced it.
     ///
     /// Optional, mandatory in entries that have been replaced by a newer entry.
-    OBSLTE,
+    Obslte,
     /// Description of the experiment represented in the entry.
     ///
     /// Mandatory.
-    TITLE,
+    Title,
     /// List of PDB entries that compose a larger macromolecular complexes.
     ///
     /// Optional, mandatory when large macromolecular complexes are split into multiple PDB entries.
-    SPLIT,
+    Split,
     /// Severe error indicator.
     ///
     /// Optional, mandatory when there are outstanding errors such as chirality.
-    CAVEAT,
+    Caveat,
     /// Description of macromolecular contents of the entry.
     ///
     /// Mandatory.
-    COMPND,
+    Compnd,
     /// Biological source of macromolecules in the entry.
     ///
     /// Mandatory.
-    SOURCE,
+    Source,
     /// List of keywords describing the macromolecule.
     ///
     /// Mandatory.
-    KEYWDS,
+    Keywds,
     /// Experimental technique used for the structure determination.
     ///
     /// Mandatory.
-    EXPDTA,
+    ExpDta,
     /// Number of models.
     ///
     /// Optional, mandatory for NMR ensemble entries.
-    NUMMDL,
+    NumMdl,
     /// Contains additional annotation pertinent to the coordinates presented in the entry.
     ///
     /// Optional, mandatory for NMR minimized average Structures or when the entire polymer chain contains C alpha or P atoms only.
-    MDLTYP,
+    MdlTyp,
     /// List of contributors.
     ///
     /// Mandatory.
-    AUTHOR,
+    Author,
     /// Revision date and related information.
     ///
     /// Mandatory.
-    REVDAT,
-    /// List of entries obsoleted from public release and replaced by current entry.
+    RevDat,
+    /// List of entries obsoleted from public release and superseded by current entry.
     ///
     /// Optional, mandatory for a replacement entry.
-    SPRSDE,
+    Sprsde,
     /// Literature citation that defines the coordinate set.
     ///
     /// Optional, mandatory for a publication describes the experiment.
-    JRNL,
+    Jrnl,
     /// General remarks; they can be structured or free form.
     ///
     /// Optional.
-    REMARK { remark_num: i16, remark: S },
+    Remark { remark_num: i16, remark: S },
     /// Reference to the entry in the sequence database(s).
     ///
     /// Split into DBREF1 and DBREF2 when accession IDs don't fit on one line.
     ///
     /// Optional, mandatory for all polymers.
-    DBREF,
+    DbRef,
     /// Identification of conflicts between PDB and the named sequence database.
     ///
     /// Optional, mandatory if sequence conflict exists.
-    SEQADV,
+    SeqAdv,
     /// Primary sequence of backbone residues.
     ///
     /// Mandatory, Mandatory if ATOM records exist.
-    SEQRES { chain_id: char, res_names: Vec<S> },
+    SeqRes { chain_id: char, res_names: Vec<S> },
     /// Identification of modifications to standard residues.
     ///
     /// Optional, mandatory if modified group exists in the coordinates.
-    MODRES,
+    ModRes,
     /// Identification of non-standard groups heterogens).
     ///
     /// Optional, mandatory if a non-standard group other than water appears in the coordinates.
-    HET,
+    Het,
     /// Compound name of the heterogens.
     ///
     /// Optional, mandatory if a non-standard group other than water appears in the coordinates.
-    HETNAM,
+    HetNam,
     /// Synonymous compound names for heterogens.
     ///
     /// Optional.
-    HETSYN,
+    HetSyn,
     /// Chemical formula of non-standard groups.
     ///
     /// Optional, mandatory if a non-standard group or water appears in the coordinates.
-    FORMUL,
+    Formul,
     /// Identification of helical substructures.
     ///
     /// Optional.
-    HELIX,
+    Helix,
     /// Identification of sheet substructures.
     ///
     /// Optional.
-    SHEET,
+    Sheet,
     /// Identification of disulfide bonds.
     ///
     /// Optional, mandatory if a disulfide bond is present.
-    SSBOND,
+    SsBond,
     /// Identification of inter-residue bonds.
     ///
     /// Optional, mandatory if non-standard residues appear in a polymer
-    LINK,
+    Link,
     /// Identification of peptide residues in cis conformation.
     ///
     /// Optional.
-    CISPEP,
+    CisPep,
     /// Identification of groups comprising important entity sites.
     ///
     /// Optional.
-    SITE,
+    Site,
     /// Unit cell parameters, space group, and Z.
     ///
     /// Mandatory.
-    CRYST1 {
+    Cryst1 {
         a: f32,
         b: f32,
         c: f32,
@@ -229,36 +229,36 @@ pub enum PdbRecord<S = String> {
         space_group: S,
         z: i16,
     },
-    /// Transformation from orthogonal coordinates to the submitted coordinates (n = 1, 2, or 3).
+    /// Transformation from orthogonal coordinates to the submitted coordinates (N = 1, 2, or 3).
     ///
     /// Mandatory.
-    ORIGXn,
-    /// Transformation from orthogonal coordinates to fractional crystallographic coordinates (n = 1, 2, or 3).
+    OrigXN,
+    /// Transformation from orthogonal coordinates to fractional crystallographic coordinates (N = 1, 2, or 3).
     ///
     /// Mandatory.
-    SCALEn,
-    /// Transformations expressing non-crystallographic symmetry (n = 1, 2, or 3).
+    ScaleN,
+    /// Transformations expressing non-crystallographic symmetry (N = 1, 2, or 3).
     ///
     /// There may be multiple sets of these records.
     ///
     /// Optional, mandatory if the complete asymmetric unit must be generated from the given coordinates using non-crystallographic symmetry.
-    MTRIXn,
+    MtrixN,
     /// Specification of model number for multiple structures in a single coordinate entry.
     ///
     /// Optional, mandatory if more than one model is present in the entry.
-    MODEL(usize),
+    Model(usize),
     /// Atomic coordinate records for standard groups.
     ///
     /// Optional, mandatory if standard residues exist.
-    ATOM(AtomRecord<S>),
+    Atom(AtomRecord<S>),
     /// Anisotropic temperature factors.
     ///
     /// Optional.
-    ANISOU,
+    AnisoU,
     /// Chain terminator.
     ///
     /// Optional, mandatory if ATOM records exist.
-    TER {
+    Ter {
         serial: i32,
         res_name: S,
         chain_id: char,
@@ -268,15 +268,15 @@ pub enum PdbRecord<S = String> {
     /// Atomic coordinate records for heterogens.
     ///
     /// Optional, mandatory if non-standard group exists.
-    HETATM(AtomRecord<S>),
+    HetAtm(AtomRecord<S>),
     /// End-of-model record for multiple structures in a single coordinate entry.
     ///
     /// Optional, mandatory if MODEL appears.
-    ENDMDL,
+    EndMdl,
     /// Connectivity records.
     ///
     /// Optional, mandatory if non-standard group appears and if LINK or SSBOND records exist.
-    CONECT {
+    Conect {
         parent: S,
         bond1: Option<S>,
         bond2: Option<S>,
@@ -286,54 +286,54 @@ pub enum PdbRecord<S = String> {
     /// Control record for bookkeeping.
     ///
     /// Mandatory.
-    MASTER,
+    Master,
     /// Last record in the file.
     ///
     /// Mandatory.
-    END,
+    End,
 }
 
 impl<S: Display + Default + Clone> Display for PdbRecord<S> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            PdbRecord::HEADER
-            | PdbRecord::OBSLTE
-            | PdbRecord::TITLE
-            | PdbRecord::SPLIT
-            | PdbRecord::CAVEAT
-            | PdbRecord::COMPND
-            | PdbRecord::SOURCE
-            | PdbRecord::KEYWDS
-            | PdbRecord::EXPDTA
-            | PdbRecord::NUMMDL
-            | PdbRecord::MDLTYP
-            | PdbRecord::AUTHOR
-            | PdbRecord::REVDAT
-            | PdbRecord::SPRSDE
-            | PdbRecord::JRNL
-            | PdbRecord::DBREF
-            | PdbRecord::SEQADV
-            | PdbRecord::MODRES
-            | PdbRecord::HET
-            | PdbRecord::HETNAM
-            | PdbRecord::HETSYN
-            | PdbRecord::FORMUL
-            | PdbRecord::HELIX
-            | PdbRecord::SHEET
-            | PdbRecord::SSBOND
-            | PdbRecord::LINK
-            | PdbRecord::CISPEP
-            | PdbRecord::SITE
-            | PdbRecord::ORIGXn
-            | PdbRecord::SCALEn
-            | PdbRecord::MTRIXn
-            | PdbRecord::ANISOU
-            | PdbRecord::MASTER
-            | PdbRecord::END => Ok(()),
-            PdbRecord::REMARK { remark_num, remark } => {
+            PdbRecord::Header
+            | PdbRecord::Obslte
+            | PdbRecord::Title
+            | PdbRecord::Split
+            | PdbRecord::Caveat
+            | PdbRecord::Compnd
+            | PdbRecord::Source
+            | PdbRecord::Keywds
+            | PdbRecord::ExpDta
+            | PdbRecord::NumMdl
+            | PdbRecord::MdlTyp
+            | PdbRecord::Author
+            | PdbRecord::RevDat
+            | PdbRecord::Sprsde
+            | PdbRecord::Jrnl
+            | PdbRecord::DbRef
+            | PdbRecord::SeqAdv
+            | PdbRecord::ModRes
+            | PdbRecord::Het
+            | PdbRecord::HetNam
+            | PdbRecord::HetSyn
+            | PdbRecord::Formul
+            | PdbRecord::Helix
+            | PdbRecord::Sheet
+            | PdbRecord::SsBond
+            | PdbRecord::Link
+            | PdbRecord::CisPep
+            | PdbRecord::Site
+            | PdbRecord::OrigXN
+            | PdbRecord::ScaleN
+            | PdbRecord::MtrixN
+            | PdbRecord::AnisoU
+            | PdbRecord::Master
+            | PdbRecord::End => Ok(()),
+            PdbRecord::Remark { remark_num, remark } => {
                 writeln!(f, "REMARK {remark_num: >3} {remark}")
             }
-            PdbRecord::SEQRES {
+            PdbRecord::SeqRes {
                 chain_id,
                 res_names,
             } => {
@@ -347,7 +347,7 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
                 };
                 Ok(())
             },
-            PdbRecord::CRYST1 {
+            PdbRecord::Cryst1 {
                 a,
                 b,
                 c,
@@ -357,14 +357,14 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
                 space_group,
                 z,
             } => writeln!(f, "CRYST1{a: >9.3}{b: >9.3}{c: >9.3}{alpha: >7.2}{beta: >7.2}{gamma: >7.2} {space_group}{z: >4}"),
-            PdbRecord::MODEL(i) => writeln!(f, "MODEL     {i: >4}"),
-            PdbRecord::ATOM(record) => writeln!(f, "ATOM  {record}"),
-            PdbRecord::HETATM(record) => writeln!(f, "HETATM{record}"),
-            PdbRecord::TER { serial, res_name, chain_id, res_seq, i_code } => {
+            PdbRecord::Model(i) => writeln!(f, "MODEL     {i: >4}"),
+            PdbRecord::Atom(record) => writeln!(f, "ATOM  {record}"),
+            PdbRecord::HetAtm(record) => writeln!(f, "HETATM{record}"),
+            PdbRecord::Ter { serial, res_name, chain_id, res_seq, i_code } => {
                 writeln!(f, "TER   {serial: >5}      {res_name: >3} {chain_id}{res_seq: >4}{i_code}")
             },
-            PdbRecord::ENDMDL => writeln!(f, "ENDMDL"),
-            PdbRecord::CONECT {
+            PdbRecord::EndMdl => writeln!(f, "ENDMDL"),
+            PdbRecord::Conect {
                 parent,
                 bond1,
                 bond2,
@@ -384,46 +384,46 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
 impl Into<PdbRecord<String>> for PdbRecord<&str> {
     fn into(self) -> PdbRecord<String> {
         match self {
-            PdbRecord::HEADER => PdbRecord::HEADER,
-            PdbRecord::OBSLTE => PdbRecord::OBSLTE,
-            PdbRecord::TITLE => PdbRecord::TITLE,
-            PdbRecord::SPLIT => PdbRecord::SPLIT,
-            PdbRecord::CAVEAT => PdbRecord::CAVEAT,
-            PdbRecord::COMPND => PdbRecord::COMPND,
-            PdbRecord::SOURCE => PdbRecord::SOURCE,
-            PdbRecord::KEYWDS => PdbRecord::KEYWDS,
-            PdbRecord::EXPDTA => PdbRecord::EXPDTA,
-            PdbRecord::NUMMDL => PdbRecord::NUMMDL,
-            PdbRecord::MDLTYP => PdbRecord::MDLTYP,
-            PdbRecord::AUTHOR => PdbRecord::AUTHOR,
-            PdbRecord::REVDAT => PdbRecord::REVDAT,
-            PdbRecord::SPRSDE => PdbRecord::SPRSDE,
-            PdbRecord::JRNL => PdbRecord::JRNL,
-            PdbRecord::REMARK { remark_num, remark } => PdbRecord::REMARK {
+            PdbRecord::Header => PdbRecord::Header,
+            PdbRecord::Obslte => PdbRecord::Obslte,
+            PdbRecord::Title => PdbRecord::Title,
+            PdbRecord::Split => PdbRecord::Split,
+            PdbRecord::Caveat => PdbRecord::Caveat,
+            PdbRecord::Compnd => PdbRecord::Compnd,
+            PdbRecord::Source => PdbRecord::Source,
+            PdbRecord::Keywds => PdbRecord::Keywds,
+            PdbRecord::ExpDta => PdbRecord::ExpDta,
+            PdbRecord::NumMdl => PdbRecord::NumMdl,
+            PdbRecord::MdlTyp => PdbRecord::MdlTyp,
+            PdbRecord::Author => PdbRecord::Author,
+            PdbRecord::RevDat => PdbRecord::RevDat,
+            PdbRecord::Sprsde => PdbRecord::Sprsde,
+            PdbRecord::Jrnl => PdbRecord::Jrnl,
+            PdbRecord::Remark { remark_num, remark } => PdbRecord::Remark {
                 remark_num,
                 remark: remark.to_owned(),
             },
-            PdbRecord::DBREF => PdbRecord::DBREF,
-            PdbRecord::SEQADV => PdbRecord::SEQADV,
-            PdbRecord::SEQRES {
+            PdbRecord::DbRef => PdbRecord::DbRef,
+            PdbRecord::SeqAdv => PdbRecord::SeqAdv,
+            PdbRecord::SeqRes {
                 chain_id,
                 res_names,
-            } => PdbRecord::SEQRES {
+            } => PdbRecord::SeqRes {
                 chain_id: chain_id.to_owned(),
                 res_names: res_names.into_iter().map(|s| s.to_owned()).collect(),
             },
-            PdbRecord::MODRES => PdbRecord::MODRES,
-            PdbRecord::HET => PdbRecord::HET,
-            PdbRecord::HETNAM => PdbRecord::HETNAM,
-            PdbRecord::HETSYN => PdbRecord::HETSYN,
-            PdbRecord::FORMUL => PdbRecord::FORMUL,
-            PdbRecord::HELIX => PdbRecord::HELIX,
-            PdbRecord::SHEET => PdbRecord::SHEET,
-            PdbRecord::SSBOND => PdbRecord::SSBOND,
-            PdbRecord::LINK => PdbRecord::LINK,
-            PdbRecord::CISPEP => PdbRecord::CISPEP,
-            PdbRecord::SITE => PdbRecord::SITE,
-            PdbRecord::CRYST1 {
+            PdbRecord::ModRes => PdbRecord::ModRes,
+            PdbRecord::Het => PdbRecord::Het,
+            PdbRecord::HetNam => PdbRecord::HetNam,
+            PdbRecord::HetSyn => PdbRecord::HetSyn,
+            PdbRecord::Formul => PdbRecord::Formul,
+            PdbRecord::Helix => PdbRecord::Helix,
+            PdbRecord::Sheet => PdbRecord::Sheet,
+            PdbRecord::SsBond => PdbRecord::SsBond,
+            PdbRecord::Link => PdbRecord::Link,
+            PdbRecord::CisPep => PdbRecord::CisPep,
+            PdbRecord::Site => PdbRecord::Site,
+            PdbRecord::Cryst1 {
                 a,
                 b,
                 c,
@@ -432,7 +432,7 @@ impl Into<PdbRecord<String>> for PdbRecord<&str> {
                 gamma,
                 space_group,
                 z,
-            } => PdbRecord::CRYST1 {
+            } => PdbRecord::Cryst1 {
                 a,
                 b,
                 c,
@@ -442,42 +442,42 @@ impl Into<PdbRecord<String>> for PdbRecord<&str> {
                 space_group: space_group.to_owned(),
                 z,
             },
-            PdbRecord::ORIGXn => PdbRecord::ORIGXn,
-            PdbRecord::SCALEn => PdbRecord::SCALEn,
-            PdbRecord::MTRIXn => PdbRecord::MTRIXn,
-            PdbRecord::MODEL(i) => PdbRecord::MODEL(i),
-            PdbRecord::ATOM(record) => PdbRecord::ATOM(record.to_owned()),
-            PdbRecord::ANISOU => PdbRecord::ANISOU,
-            PdbRecord::TER {
+            PdbRecord::OrigXN => PdbRecord::OrigXN,
+            PdbRecord::ScaleN => PdbRecord::ScaleN,
+            PdbRecord::MtrixN => PdbRecord::MtrixN,
+            PdbRecord::Model(i) => PdbRecord::Model(i),
+            PdbRecord::Atom(record) => PdbRecord::Atom(record.to_owned()),
+            PdbRecord::AnisoU => PdbRecord::AnisoU,
+            PdbRecord::Ter {
                 serial,
                 res_name,
                 chain_id,
                 res_seq,
                 i_code,
-            } => PdbRecord::TER {
+            } => PdbRecord::Ter {
                 serial,
                 res_name: res_name.to_owned(),
                 chain_id,
                 res_seq,
                 i_code,
             },
-            PdbRecord::HETATM(record) => PdbRecord::HETATM(record.to_owned()),
-            PdbRecord::ENDMDL => PdbRecord::ENDMDL,
-            PdbRecord::CONECT {
+            PdbRecord::HetAtm(record) => PdbRecord::HetAtm(record.to_owned()),
+            PdbRecord::EndMdl => PdbRecord::EndMdl,
+            PdbRecord::Conect {
                 parent,
                 bond1,
                 bond2,
                 bond3,
                 bond4,
-            } => PdbRecord::CONECT {
+            } => PdbRecord::Conect {
                 parent: parent.to_owned(),
                 bond1: bond1.map(str::to_owned),
                 bond2: bond2.map(str::to_owned),
                 bond3: bond3.map(str::to_owned),
                 bond4: bond4.map(str::to_owned),
             },
-            PdbRecord::MASTER => PdbRecord::MASTER,
-            PdbRecord::END => PdbRecord::END,
+            PdbRecord::Master => PdbRecord::Master,
+            PdbRecord::End => PdbRecord::End,
         }
     }
 }
@@ -653,7 +653,7 @@ impl<'t> PdbRecordParser<'t> {
                 found: res_names.len(),
             })
         } else {
-            Ok(PdbRecord::SEQRES {
+            Ok(PdbRecord::SeqRes {
                 chain_id,
                 res_names,
             })
@@ -693,45 +693,45 @@ impl<'t> PdbRecordParser<'t> {
     fn get_record(&mut self) -> Result<PdbRecord<&'t str>> {
         let line = self.get_current_line();
         match &line[..6] {
-            "HEADER" => Ok(PdbRecord::HEADER),
-            "OBSLTE" => Ok(PdbRecord::OBSLTE),
-            "TITLE " => Ok(PdbRecord::TITLE),
-            "SPLIT " => Ok(PdbRecord::SPLIT),
-            "CAVEAT" => Ok(PdbRecord::CAVEAT),
-            "COMPND" => Ok(PdbRecord::COMPND),
-            "SOURCE" => Ok(PdbRecord::SOURCE),
-            "KEYWDS" => Ok(PdbRecord::KEYWDS),
-            "EXPDTA" => Ok(PdbRecord::EXPDTA),
-            "NUMMDL" => Ok(PdbRecord::NUMMDL),
-            "MDLTYP" => Ok(PdbRecord::MDLTYP),
-            "AUTHOR" => Ok(PdbRecord::AUTHOR),
-            "REVDAT" => Ok(PdbRecord::REVDAT),
-            "SPRSDE" => Ok(PdbRecord::SPRSDE),
-            "JRNL  " => Ok(PdbRecord::JRNL),
-            "REMARK" => Ok(PdbRecord::REMARK {
+            "HEADER" => Ok(PdbRecord::Header),
+            "OBSLTE" => Ok(PdbRecord::Obslte),
+            "TITLE " => Ok(PdbRecord::Title),
+            "SPLIT " => Ok(PdbRecord::Split),
+            "CAVEAT" => Ok(PdbRecord::Caveat),
+            "COMPND" => Ok(PdbRecord::Compnd),
+            "SOURCE" => Ok(PdbRecord::Source),
+            "KEYWDS" => Ok(PdbRecord::Keywds),
+            "EXPDTA" => Ok(PdbRecord::ExpDta),
+            "NUMMDL" => Ok(PdbRecord::NumMdl),
+            "MDLTYP" => Ok(PdbRecord::MdlTyp),
+            "AUTHOR" => Ok(PdbRecord::Author),
+            "REVDAT" => Ok(PdbRecord::RevDat),
+            "SPRSDE" => Ok(PdbRecord::Sprsde),
+            "JRNL  " => Ok(PdbRecord::Jrnl),
+            "REMARK" => Ok(PdbRecord::Remark {
                 remark_num: self.try_field(7..=9)?.trim().parse()?,
                 remark: self.try_field(11..=78)?,
             }),
-            "DBREF " => Ok(PdbRecord::DBREF),
+            "DBREF " => Ok(PdbRecord::DbRef),
             "DBREF1" => {
                 let _dbref1: &'t str = line;
                 let _dbref2: &'t str = self.try_continuation("DBREF2")?;
-                Ok(PdbRecord::DBREF)
+                Ok(PdbRecord::DbRef)
             }
-            "SEQADV" => Ok(PdbRecord::SEQADV),
+            "SEQADV" => Ok(PdbRecord::SeqAdv),
             "SEQRES" => self.parse_seqres(),
-            "MODRES" => Ok(PdbRecord::MODRES),
-            "HET   " => Ok(PdbRecord::HET),
-            "HETNAM" => Ok(PdbRecord::HETNAM),
-            "HETSYN" => Ok(PdbRecord::HETSYN),
-            "FORMUL" => Ok(PdbRecord::FORMUL),
-            "HELIX " => Ok(PdbRecord::HELIX),
-            "SHEET " => Ok(PdbRecord::SHEET),
-            "SSBOND" => Ok(PdbRecord::SSBOND),
-            "LINK  " => Ok(PdbRecord::LINK),
-            "CISPEP" => Ok(PdbRecord::CISPEP),
-            "SITE  " => Ok(PdbRecord::SITE),
-            "CRYST1" => Ok(PdbRecord::CRYST1 {
+            "MODRES" => Ok(PdbRecord::ModRes),
+            "HET   " => Ok(PdbRecord::Het),
+            "HETNAM" => Ok(PdbRecord::HetNam),
+            "HETSYN" => Ok(PdbRecord::HetSyn),
+            "FORMUL" => Ok(PdbRecord::Formul),
+            "HELIX " => Ok(PdbRecord::Helix),
+            "SHEET " => Ok(PdbRecord::Sheet),
+            "SSBOND" => Ok(PdbRecord::SsBond),
+            "LINK  " => Ok(PdbRecord::Link),
+            "CISPEP" => Ok(PdbRecord::CisPep),
+            "SITE  " => Ok(PdbRecord::Site),
+            "CRYST1" => Ok(PdbRecord::Cryst1 {
                 a: self.try_parsed_field(6..=14)?,
                 b: self.try_parsed_field(15..=23)?,
                 c: self.try_parsed_field(24..=32)?,
@@ -741,36 +741,36 @@ impl<'t> PdbRecordParser<'t> {
                 space_group: self.try_field(55..=65)?,
                 z: self.try_parsed_field(66..=69)?,
             }),
-            "ORIGX1" => Ok(PdbRecord::ORIGXn),
-            "ORIGX2" => Ok(PdbRecord::ORIGXn),
-            "ORIGX3" => Ok(PdbRecord::ORIGXn),
-            "SCALE1" => Ok(PdbRecord::SCALEn),
-            "SCALE2" => Ok(PdbRecord::SCALEn),
-            "SCALE3" => Ok(PdbRecord::SCALEn),
-            "MTRIX1" => Ok(PdbRecord::MTRIXn),
-            "MTRIX2" => Ok(PdbRecord::MTRIXn),
-            "MTRIX3" => Ok(PdbRecord::MTRIXn),
-            "MODEL " => Ok(PdbRecord::MODEL(self.try_parsed_field(10..=13)?)),
-            "ATOM  " => Ok(PdbRecord::ATOM(self.parse_atomrecord()?)),
-            "ANISOU" => Ok(PdbRecord::ANISOU),
-            "TER   " => Ok(PdbRecord::TER {
+            "ORIGX1" => Ok(PdbRecord::OrigXN),
+            "ORIGX2" => Ok(PdbRecord::OrigXN),
+            "ORIGX3" => Ok(PdbRecord::OrigXN),
+            "SCALE1" => Ok(PdbRecord::ScaleN),
+            "SCALE2" => Ok(PdbRecord::ScaleN),
+            "SCALE3" => Ok(PdbRecord::ScaleN),
+            "MTRIX1" => Ok(PdbRecord::MtrixN),
+            "MTRIX2" => Ok(PdbRecord::MtrixN),
+            "MTRIX3" => Ok(PdbRecord::MtrixN),
+            "MODEL " => Ok(PdbRecord::Model(self.try_parsed_field(10..=13)?)),
+            "ATOM  " => Ok(PdbRecord::Atom(self.parse_atomrecord()?)),
+            "ANISOU" => Ok(PdbRecord::AnisoU),
+            "TER   " => Ok(PdbRecord::Ter {
                 serial: self.try_parsed_field(6..=10)?,
                 res_name: self.try_field(17..=19)?.trim(),
                 chain_id: self.try_char_field(21)?,
                 res_seq: self.try_parsed_field(22..=25)?,
                 i_code: self.try_char_field(26)?,
             }),
-            "HETATM" => Ok(PdbRecord::HETATM(self.parse_atomrecord()?)),
-            "ENDMDL" => Ok(PdbRecord::ENDMDL),
-            "CONECT" => Ok(PdbRecord::CONECT {
+            "HETATM" => Ok(PdbRecord::HetAtm(self.parse_atomrecord()?)),
+            "ENDMDL" => Ok(PdbRecord::EndMdl),
+            "CONECT" => Ok(PdbRecord::Conect {
                 parent: self.try_field(6..=10)?.trim(),
                 bond1: self.get_field(11..=15),
                 bond2: self.get_field(16..=20),
                 bond3: self.get_field(21..=25),
                 bond4: self.get_field(26..=30),
             }),
-            "MASTER" => Ok(PdbRecord::MASTER),
-            "END   " => Ok(PdbRecord::END),
+            "MASTER" => Ok(PdbRecord::Master),
+            "END   " => Ok(PdbRecord::End),
             s => Err(PdbParseErr::UnknownRecordType(s.to_owned())),
         }
     }
