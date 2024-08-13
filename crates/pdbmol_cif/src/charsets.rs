@@ -30,20 +30,8 @@ pub fn any_print_char(input: &mut &str) -> PResult<char> {
         .parse_next(input)
 }
 
-pub fn any_print_char_noquote(input: &mut &str) -> PResult<char> {
-    one_of(('\t', ' ', '!', '#'..='&', '('..='~'))
-        .context(StrContext::Label("Print character (except quotes)"))
-        .parse_next(input)
-}
-
 pub fn printchar0<'s>(input: &mut &'s str) -> PResult<&'s str> {
     repeat::<_, _, (), _, _>(0.., any_print_char)
-        .take()
-        .parse_next(input)
-}
-
-pub fn printchar1<'s>(input: &mut &'s str) -> PResult<&'s str> {
-    repeat::<_, _, (), _, _>(1.., any_print_char)
         .take()
         .parse_next(input)
 }

@@ -80,41 +80,12 @@ pub fn noteol_value<'s>(input: &mut &'s str) -> PResult<&'s str> {
     alt((eol_agnostic_value.take(), noteol_string)).parse_next(input)
 }
 
-/// This parser must only be called immediately after an EOL
-///
-/// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
-/// when followed by whitespace.
-fn eol_value_parsed<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
-    alt((eol_agnostic_value, eol_string.map(Value::String))).parse_next(input)
-}
-
-/// This parser must only be called immediately after a non-EOL character
-///
-/// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
-/// when followed by whitespace.
-fn noteol_value_parsed<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
-    alt((eol_agnostic_value, noteol_string.map(Value::String))).parse_next(input)
-}
-
 /// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
 /// when followed by whitespace.
 pub fn whitespace_value<'s>(input: &mut &'s str) -> PResult<&'s str> {
     alt((
         preceded(whitespace.verify(|s: &str| s.ends_with('\n')), eol_value),
         preceded(whitespace, noteol_value),
-    ))
-    .parse_next(input)
-}
-
-/// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
-/// when followed by whitespace.
-fn whitespace_value_parsed<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
-    alt((
-        preceded(
-            whitespace.verify(|s: &str| s.ends_with('\n')),
-            eol_value_parsed,
-        ),
-        preceded(whitespace, noteol_value_parsed),
     ))
     .parse_next(input)
 }
@@ -129,6 +100,37 @@ mod tests {
     use crate::charsets::eol;
     use crate::values::numeric::Number;
     use winnow::combinator::preceded;
+
+    // TODO: Convert these tests to use the eol_value, noteol_value and
+    // whitespace_value functions
+    /// This parser must only be called immediately after an EOL
+    ///
+    /// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
+    /// when followed by whitespace.
+    fn eol_value_parsed<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
+        alt((eol_agnostic_value, eol_string.map(Value::String))).parse_next(input)
+    }
+
+    /// This parser must only be called immediately after a non-EOL character
+    ///
+    /// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
+    /// when followed by whitespace.
+    fn noteol_value_parsed<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
+        alt((eol_agnostic_value, noteol_string.map(Value::String))).parse_next(input)
+    }
+
+    /// In contrast to the spec, Numeric, Inapplicable and Unknown values match only
+    /// when followed by whitespace.
+    fn whitespace_value_parsed<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
+        alt((
+            preceded(
+                whitespace.verify(|s: &str| s.ends_with('\n')),
+                eol_value_parsed,
+            ),
+            preceded(whitespace, noteol_value_parsed),
+        ))
+        .parse_next(input)
+    }
 
     #[test]
     fn test_eol_value() {

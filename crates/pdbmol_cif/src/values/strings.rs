@@ -4,6 +4,8 @@ use winnow::{
     prelude::*,
 };
 
+use crate::reserved::is_not_reserved;
+
 use super::super::{charsets, whitespace};
 
 /// This parser must only be called immediately after an EOL
@@ -58,6 +60,7 @@ fn single_quoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
 fn eol_unquoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
     (charsets::ordinary_char, charsets::nonblank0)
         .take()
+        .verify(is_not_reserved)
         .context(StrContext::Label("unquoted string"))
         .parse_next(input)
 }
@@ -66,6 +69,7 @@ fn eol_unquoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
 fn noteol_unquoted_string<'s>(input: &mut &'s str) -> PResult<&'s str> {
     (alt((charsets::ordinary_char, ';')), charsets::nonblank0)
         .take()
+        .verify(is_not_reserved)
         .context(StrContext::Label("unquoted string"))
         .parse_next(input)
 }

@@ -80,20 +80,20 @@ pub struct Residue<'s> {
     /// Residue ID code
     ///
     /// `_chem_comp.id` in CCD
-    id: &'s str,
+    pub id: &'s str,
 
     /// Chemical name
     ///
     /// `_chem_comp.name` in CCD
-    name: &'s str,
+    pub name: &'s str,
 
     /// Three-character residue ID code
     ///
     /// `_chem_comp.type` in CCD
-    linking_type: LinkingType,
+    pub linking_type: LinkingType,
 
-    atoms: Atoms<'s>,
-    bonds: Bonds<'s>,
+    pub atoms: Atoms<'s>,
+    pub bonds: Bonds<'s>,
 }
 
 impl<'s> TryFrom<&ParsedDataBlock<'s>> for Residue<'s> {
