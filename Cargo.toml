@@ -14,3 +14,10 @@ pdbmol_pdb = { path = "crates/pdbmol_pdb" }
 
 [workspace]
 members = ["crates/*"]
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+type_complexity = "allow"
+should_implement_trait = "allow"

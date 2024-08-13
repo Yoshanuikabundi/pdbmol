@@ -104,18 +104,18 @@ impl<'s> TryFrom<&ParsedDataBlock<'s>> for Residue<'s> {
             id: value
                 .get("chem_comp.id")
                 .ok_or("no id")?
-                .get(0)
+                .first()
                 .ok_or("no id")?,
             name: value
                 .get("chem_comp.name")
                 .ok_or("no name")?
-                .get(0)
+                .first()
                 .ok_or("no name")?,
             linking_type: LinkingType::from_str(
                 value
                     .get("chem_comp.type")
                     .ok_or("no type")?
-                    .get(0)
+                    .first()
                     .ok_or("no type")?,
             )?,
             atoms: Atoms::try_from(value)?,
@@ -247,8 +247,7 @@ fn get_coords_with_key(
     map: &HashMap<&str, Vec<&str>>,
     key: &str,
 ) -> Result<Vec<Option<f32>>, String> {
-    Ok(map
-        .get(key)
+    map.get(key)
         .ok_or(format!("no values for {key}"))?
         .iter()
         .cloned()
@@ -257,7 +256,7 @@ fn get_coords_with_key(
             s => s.parse().map(Some),
         })
         .collect::<Result<Vec<Option<f32>>, _>>()
-        .map_err(|e| format!("{key} failed to parse: {e}"))?)
+        .map_err(|e| format!("{key} failed to parse: {e}"))
 }
 
 /// Get the coordinates from a CCD datablock
@@ -342,12 +341,12 @@ impl FromStr for BondOrder {
     }
 }
 
-impl Into<u8> for BondOrder {
-    fn into(self) -> u8 {
-        match self {
-            Self::Single => 1,
-            Self::Double => 2,
-            Self::Triple => 3,
+impl From<BondOrder> for u8 {
+    fn from(value: BondOrder) -> Self {
+        match value {
+            BondOrder::Single => 1,
+            BondOrder::Double => 2,
+            BondOrder::Triple => 3,
         }
     }
 }

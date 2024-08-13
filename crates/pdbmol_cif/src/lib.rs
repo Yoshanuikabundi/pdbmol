@@ -18,16 +18,16 @@ use winnow::{
 pub type ParsedDataBlock<'s> = HashMap<&'s str, Vec<&'s str>>;
 pub type ParsedCif<'s> = HashMap<&'s str, ParsedDataBlock<'s>>;
 
-pub fn parse(mut s: &str) -> Result<ParsedCif, ParseError<&str, ContextError>> {
+pub fn parse(s: &str) -> Result<ParsedCif, ParseError<&str, ContextError>> {
     Ok(cif
-        .parse(&mut s)?
+        .parse(s)?
         .into_iter()
         .map(|(datablock_heading, datablock)| {
             (
                 datablock_heading,
                 datablock
                     .into_iter()
-                    .map(
+                    .flat_map(
                         |datablockitem| -> Box<dyn Iterator<Item = (&str, Vec<&str>)>> {
                             match datablockitem {
                                 DataBlockItem::DataItems(map) => {
@@ -38,7 +38,6 @@ pub fn parse(mut s: &str) -> Result<ParsedCif, ParseError<&str, ContextError>> {
                             }
                         },
                     )
-                    .flatten()
                     .collect(),
             )
         })

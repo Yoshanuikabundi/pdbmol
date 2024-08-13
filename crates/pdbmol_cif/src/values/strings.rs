@@ -133,15 +133,15 @@ mod tests {
         let output = double_quoted_string.parse_next(&mut stream);
         assert!(output.is_err());
 
-        let mut stream = r#""Double quoted strings may include 'single quotes'" "#;
-        let output = terminated(double_quoted_string, " ").parse(&mut stream);
+        let stream = r#""Double quoted strings may include 'single quotes'" "#;
+        let output = terminated(double_quoted_string, " ").parse(stream);
         assert_eq!(
             output,
             Ok(r#"Double quoted strings may include 'single quotes'"#)
         );
 
-        let mut stream = r#""Double quoted strings may include '"' as long as it is not followed by whitespace" "#;
-        let output = terminated(double_quoted_string, " ").parse(&mut stream);
+        let stream = r#""Double quoted strings may include '"' as long as it is not followed by whitespace" "#;
+        let output = terminated(double_quoted_string, " ").parse(stream);
         assert_eq!(
             output,
             Ok(
@@ -168,15 +168,15 @@ mod tests {
         let output = single_quoted_string.parse_next(&mut stream);
         assert!(output.is_err());
 
-        let mut stream = r#"'Single quoted strings may include "double quotes"' "#;
-        let output = terminated(single_quoted_string, " ").parse(&mut stream);
+        let stream = r#"'Single quoted strings may include "double quotes"' "#;
+        let output = terminated(single_quoted_string, " ").parse(stream);
         assert_eq!(
             output,
             Ok(r#"Single quoted strings may include "double quotes""#)
         );
 
-        let mut stream = r#"'Single quoted strings may include "'" as long as it is not followed by whitespace' "#;
-        let output = terminated(single_quoted_string, " ").parse(&mut stream);
+        let stream = r#"'Single quoted strings may include "'" as long as it is not followed by whitespace' "#;
+        let output = terminated(single_quoted_string, " ").parse(stream);
         assert_eq!(
             output,
             Ok(

@@ -379,7 +379,7 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
                     for res_name in chunk {
                         write!(f, " {res_name: >3}")?;
                     }
-                    writeln!(f, "")?;
+                    writeln!(f)?;
                 }
                 Ok(())
             }
@@ -434,6 +434,7 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
             }
             PdbRecord::EndMdl => writeln!(f, "ENDMDL"),
             PdbRecord::Conect { parent, bonds } => {
+                #[allow(clippy::get_first)]
                 let bond1 = bonds.get(0).cloned().unwrap_or_default();
                 let bond2 = bonds.get(1).cloned().unwrap_or_default();
                 let bond3 = bonds.get(2).cloned().unwrap_or_default();
@@ -446,10 +447,9 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
         }
     }
 }
-
-impl Into<PdbRecord<String>> for PdbRecord<&str> {
-    fn into(self) -> PdbRecord<String> {
-        match self {
+impl From<PdbRecord<&str>> for PdbRecord<String> {
+    fn from(value: PdbRecord<&str>) -> Self {
+        match value {
             PdbRecord::Header => PdbRecord::Header,
             PdbRecord::Obslte => PdbRecord::Obslte,
             PdbRecord::Title => PdbRecord::Title,
@@ -641,7 +641,6 @@ impl<'t> PdbRecordParser<'t> {
         line: &'t str,
         fields: impl IntoIterator<Item = RangeInclusive<usize>>,
     ) -> impl Iterator<Item = &'t str> {
-        let line = line;
         fields
             .into_iter()
             .map_while(|range| line.get(range).map(str::trim).take_if(|s| !s.is_empty()))
@@ -681,10 +680,10 @@ impl<'t> PdbRecordParser<'t> {
 
         let res_names: Vec<&'t str> = [self.get_current_line()]
             .into_iter()
-            .chain((ser_num + 1..).into_iter().map_while(|i| {
+            .chain((ser_num + 1..).map_while(|i| {
                 self.get_continuation(&format!("SEQRES {i: >3} {chain_id} {num_res: >4}"))
             }))
-            .map(|line| {
+            .flat_map(|line| {
                 PdbRecordParser::split_line(
                     line,
                     [
@@ -704,7 +703,6 @@ impl<'t> PdbRecordParser<'t> {
                     ],
                 )
             })
-            .flatten()
             .collect();
 
         if res_names.len() != num_res {

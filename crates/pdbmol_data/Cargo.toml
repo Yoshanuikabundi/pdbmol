@@ -8,3 +8,6 @@ strum = { version = "0.26.3", features = ["derive"] }
 
 [dev-dependencies]
 itertools = "0.13.0"
+
+[lints]
+workspace = true

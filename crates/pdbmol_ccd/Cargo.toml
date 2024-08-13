@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 pdbmol_ccdparse = { path = "../pdbmol_ccdparse" }
 pdbmol_cif = { path = "../pdbmol_cif" }
+
+[lints]
+workspace = true
