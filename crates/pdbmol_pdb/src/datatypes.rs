@@ -1,14 +1,99 @@
+use itertools::Itertools;
 use std::{
-    error::Error,
-    fmt::{write, Display},
+    fmt::Display,
     iter::Peekable,
-    num::ParseIntError,
-    ops::{RangeBounds, RangeInclusive},
-    str::Lines,
+    num::{ParseFloatError, ParseIntError},
+    ops::RangeInclusive,
+    str::{FromStr, Lines},
 };
 use thiserror::Error;
 
-pub enum PdbRecord<'t> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct AtomRecord<S = String> {
+    serial: i32,
+    name: S,
+    alt_loc: char,
+    res_name: S,
+    chain_id: char,
+    res_seq: i32,
+    i_code: char,
+    x: f32,
+    y: f32,
+    z: f32,
+    occupancy: f32,
+    temp_factor: f32,
+    element: S,
+    charge: i8,
+}
+
+impl<S: Display> Display for AtomRecord<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let AtomRecord {
+            serial,
+            name,
+            alt_loc,
+            res_name,
+            chain_id,
+            res_seq,
+            i_code,
+            x,
+            y,
+            z,
+            occupancy,
+            temp_factor,
+            element,
+            charge,
+        } = self;
+        let charge: String = match charge.cmp(&0) {
+            std::cmp::Ordering::Less => format!("{}-", -charge),
+            std::cmp::Ordering::Equal => "  ".to_string(),
+            std::cmp::Ordering::Greater => format!("{charge}+"),
+        };
+        let name = format!("{name: <3}");
+        write!(f, "{serial: >5} {name: >4}{alt_loc}{res_name: >3} {chain_id}{res_seq: >4}{i_code}   {x: >8.3}{y: >8.3}{z: >8.3}{occupancy: >6.2}{temp_factor: >6.2}          {element: >2}{charge: >2}")
+    }
+}
+
+impl AtomRecord<&str> {
+    pub fn to_owned(&self) -> AtomRecord<String> {
+        let AtomRecord {
+            serial,
+            name,
+            alt_loc,
+            res_name,
+            chain_id,
+            res_seq,
+            i_code,
+            x,
+            y,
+            z,
+            occupancy,
+            temp_factor,
+            element,
+            charge,
+        } = *self;
+
+        AtomRecord {
+            serial,
+            name: name.to_owned(),
+            alt_loc,
+            res_name: res_name.to_owned(),
+            chain_id: chain_id.to_owned(),
+            res_seq,
+            i_code,
+            x,
+            y,
+            z,
+            occupancy,
+            temp_factor,
+            element: element.to_owned(),
+            charge,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum PdbRecord<S = String> {
     /// First line of the entry, contains PDB ID code, classification, and date of deposition.
     ///
     /// Mandatory.
@@ -72,7 +157,7 @@ pub enum PdbRecord<'t> {
     /// General remarks; they can be structured or free form.
     ///
     /// Optional.
-    REMARK,
+    REMARK { remark_num: i16, remark: S },
     /// Reference to the entry in the sequence database(s).
     ///
     /// Split into DBREF1 and DBREF2 when accession IDs don't fit on one line.
@@ -86,10 +171,7 @@ pub enum PdbRecord<'t> {
     /// Primary sequence of backbone residues.
     ///
     /// Mandatory, Mandatory if ATOM records exist.
-    SEQRES {
-        chain_id: char,
-        res_names: Vec<&'t str>,
-    },
+    SEQRES { chain_id: char, res_names: Vec<S> },
     /// Identification of modifications to standard residues.
     ///
     /// Optional, mandatory if modified group exists in the coordinates.
@@ -137,7 +219,16 @@ pub enum PdbRecord<'t> {
     /// Unit cell parameters, space group, and Z.
     ///
     /// Mandatory.
-    CRYST1,
+    CRYST1 {
+        a: f32,
+        b: f32,
+        c: f32,
+        alpha: f32,
+        beta: f32,
+        gamma: f32,
+        space_group: S,
+        z: i16,
+    },
     /// Transformation from orthogonal coordinates to the submitted coordinates (n = 1, 2, or 3).
     ///
     /// Mandatory.
@@ -155,11 +246,11 @@ pub enum PdbRecord<'t> {
     /// Specification of model number for multiple structures in a single coordinate entry.
     ///
     /// Optional, mandatory if more than one model is present in the entry.
-    MODEL,
+    MODEL(usize),
     /// Atomic coordinate records for standard groups.
     ///
     /// Optional, mandatory if standard residues exist.
-    ATOM,
+    ATOM(AtomRecord<S>),
     /// Anisotropic temperature factors.
     ///
     /// Optional.
@@ -167,11 +258,17 @@ pub enum PdbRecord<'t> {
     /// Chain terminator.
     ///
     /// Optional, mandatory if ATOM records exist.
-    TER,
+    TER {
+        serial: i32,
+        res_name: S,
+        chain_id: char,
+        res_seq: i32,
+        i_code: char,
+    },
     /// Atomic coordinate records for heterogens.
     ///
     /// Optional, mandatory if non-standard group exists.
-    HETATM,
+    HETATM(AtomRecord<S>),
     /// End-of-model record for multiple structures in a single coordinate entry.
     ///
     /// Optional, mandatory if MODEL appears.
@@ -179,7 +276,13 @@ pub enum PdbRecord<'t> {
     /// Connectivity records.
     ///
     /// Optional, mandatory if non-standard group appears and if LINK or SSBOND records exist.
-    CONECT,
+    CONECT {
+        parent: S,
+        bond1: Option<S>,
+        bond2: Option<S>,
+        bond3: Option<S>,
+        bond4: Option<S>,
+    },
     /// Control record for bookkeeping.
     ///
     /// Mandatory.
@@ -190,8 +293,198 @@ pub enum PdbRecord<'t> {
     END,
 }
 
+impl<S: Display + Default + Clone> Display for PdbRecord<S> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PdbRecord::HEADER
+            | PdbRecord::OBSLTE
+            | PdbRecord::TITLE
+            | PdbRecord::SPLIT
+            | PdbRecord::CAVEAT
+            | PdbRecord::COMPND
+            | PdbRecord::SOURCE
+            | PdbRecord::KEYWDS
+            | PdbRecord::EXPDTA
+            | PdbRecord::NUMMDL
+            | PdbRecord::MDLTYP
+            | PdbRecord::AUTHOR
+            | PdbRecord::REVDAT
+            | PdbRecord::SPRSDE
+            | PdbRecord::JRNL
+            | PdbRecord::DBREF
+            | PdbRecord::SEQADV
+            | PdbRecord::MODRES
+            | PdbRecord::HET
+            | PdbRecord::HETNAM
+            | PdbRecord::HETSYN
+            | PdbRecord::FORMUL
+            | PdbRecord::HELIX
+            | PdbRecord::SHEET
+            | PdbRecord::SSBOND
+            | PdbRecord::LINK
+            | PdbRecord::CISPEP
+            | PdbRecord::SITE
+            | PdbRecord::ORIGXn
+            | PdbRecord::SCALEn
+            | PdbRecord::MTRIXn
+            | PdbRecord::ANISOU
+            | PdbRecord::MASTER
+            | PdbRecord::END => Ok(()),
+            PdbRecord::REMARK { remark_num, remark } => {
+                writeln!(f, "REMARK {remark_num: >3} {remark}")
+            }
+            PdbRecord::SEQRES {
+                chain_id,
+                res_names,
+            } => {
+                let num_res = res_names.len();
+                for (i, chunk) in res_names.chunks(13).enumerate() {
+                    write!(f, "SEQRES {: >3} {chain_id} {num_res: >4} ", i+1)?;
+                    for res_name in chunk {
+                        write!(f, " {res_name: >3}")?;
+                    }
+                    writeln!(f, "")?;
+                };
+                Ok(())
+            },
+            PdbRecord::CRYST1 {
+                a,
+                b,
+                c,
+                alpha,
+                beta,
+                gamma,
+                space_group,
+                z,
+            } => writeln!(f, "CRYST1{a: >9.3}{b: >9.3}{c: >9.3}{alpha: >7.2}{beta: >7.2}{gamma: >7.2} {space_group}{z: >4}"),
+            PdbRecord::MODEL(i) => writeln!(f, "MODEL     {i: >4}"),
+            PdbRecord::ATOM(record) => writeln!(f, "ATOM  {record}"),
+            PdbRecord::HETATM(record) => writeln!(f, "HETATM{record}"),
+            PdbRecord::TER { serial, res_name, chain_id, res_seq, i_code } => {
+                writeln!(f, "TER   {serial: >5}      {res_name: >3} {chain_id}{res_seq: >4}{i_code}")
+            },
+            PdbRecord::ENDMDL => writeln!(f, "ENDMDL"),
+            PdbRecord::CONECT {
+                parent,
+                bond1,
+                bond2,
+                bond3,
+                bond4,
+            } => {
+                let bond1 = bond1.clone().unwrap_or_default();
+                let bond2 = bond2.clone().unwrap_or_default();
+                let bond3 = bond3.clone().unwrap_or_default();
+                let bond4 = bond4.clone().unwrap_or_default();
+                writeln!(f, "CONECT{parent: >5}{bond1: >5}{bond2: >5}{bond3: >5}{bond4: >5}")
+            },
+        }
+    }
+}
+
+impl Into<PdbRecord<String>> for PdbRecord<&str> {
+    fn into(self) -> PdbRecord<String> {
+        match self {
+            PdbRecord::HEADER => PdbRecord::HEADER,
+            PdbRecord::OBSLTE => PdbRecord::OBSLTE,
+            PdbRecord::TITLE => PdbRecord::TITLE,
+            PdbRecord::SPLIT => PdbRecord::SPLIT,
+            PdbRecord::CAVEAT => PdbRecord::CAVEAT,
+            PdbRecord::COMPND => PdbRecord::COMPND,
+            PdbRecord::SOURCE => PdbRecord::SOURCE,
+            PdbRecord::KEYWDS => PdbRecord::KEYWDS,
+            PdbRecord::EXPDTA => PdbRecord::EXPDTA,
+            PdbRecord::NUMMDL => PdbRecord::NUMMDL,
+            PdbRecord::MDLTYP => PdbRecord::MDLTYP,
+            PdbRecord::AUTHOR => PdbRecord::AUTHOR,
+            PdbRecord::REVDAT => PdbRecord::REVDAT,
+            PdbRecord::SPRSDE => PdbRecord::SPRSDE,
+            PdbRecord::JRNL => PdbRecord::JRNL,
+            PdbRecord::REMARK { remark_num, remark } => PdbRecord::REMARK {
+                remark_num,
+                remark: remark.to_owned(),
+            },
+            PdbRecord::DBREF => PdbRecord::DBREF,
+            PdbRecord::SEQADV => PdbRecord::SEQADV,
+            PdbRecord::SEQRES {
+                chain_id,
+                res_names,
+            } => PdbRecord::SEQRES {
+                chain_id: chain_id.to_owned(),
+                res_names: res_names.into_iter().map(|s| s.to_owned()).collect(),
+            },
+            PdbRecord::MODRES => PdbRecord::MODRES,
+            PdbRecord::HET => PdbRecord::HET,
+            PdbRecord::HETNAM => PdbRecord::HETNAM,
+            PdbRecord::HETSYN => PdbRecord::HETSYN,
+            PdbRecord::FORMUL => PdbRecord::FORMUL,
+            PdbRecord::HELIX => PdbRecord::HELIX,
+            PdbRecord::SHEET => PdbRecord::SHEET,
+            PdbRecord::SSBOND => PdbRecord::SSBOND,
+            PdbRecord::LINK => PdbRecord::LINK,
+            PdbRecord::CISPEP => PdbRecord::CISPEP,
+            PdbRecord::SITE => PdbRecord::SITE,
+            PdbRecord::CRYST1 {
+                a,
+                b,
+                c,
+                alpha,
+                beta,
+                gamma,
+                space_group,
+                z,
+            } => PdbRecord::CRYST1 {
+                a,
+                b,
+                c,
+                alpha,
+                beta,
+                gamma,
+                space_group: space_group.to_owned(),
+                z,
+            },
+            PdbRecord::ORIGXn => PdbRecord::ORIGXn,
+            PdbRecord::SCALEn => PdbRecord::SCALEn,
+            PdbRecord::MTRIXn => PdbRecord::MTRIXn,
+            PdbRecord::MODEL(i) => PdbRecord::MODEL(i),
+            PdbRecord::ATOM(record) => PdbRecord::ATOM(record.to_owned()),
+            PdbRecord::ANISOU => PdbRecord::ANISOU,
+            PdbRecord::TER {
+                serial,
+                res_name,
+                chain_id,
+                res_seq,
+                i_code,
+            } => PdbRecord::TER {
+                serial,
+                res_name: res_name.to_owned(),
+                chain_id,
+                res_seq,
+                i_code,
+            },
+            PdbRecord::HETATM(record) => PdbRecord::HETATM(record.to_owned()),
+            PdbRecord::ENDMDL => PdbRecord::ENDMDL,
+            PdbRecord::CONECT {
+                parent,
+                bond1,
+                bond2,
+                bond3,
+                bond4,
+            } => PdbRecord::CONECT {
+                parent: parent.to_owned(),
+                bond1: bond1.map(str::to_owned),
+                bond2: bond2.map(str::to_owned),
+                bond3: bond3.map(str::to_owned),
+                bond4: bond4.map(str::to_owned),
+            },
+            PdbRecord::MASTER => PdbRecord::MASTER,
+            PdbRecord::END => PdbRecord::END,
+        }
+    }
+}
+
 #[derive(Error, Debug)]
-enum PdbParseErr {
+#[non_exhaustive]
+pub enum PdbParseErr {
     #[error("record type {0} is unknown")]
     UnknownRecordType(String),
     #[error("expected a {expected} record, found {found}")]
@@ -205,19 +498,30 @@ enum PdbParseErr {
     UnexpectedEof,
     #[error("couldn't parse int: {0}")]
     CouldNotParseInt(#[from] ParseIntError),
+    #[error("couldn't parse float: {0}")]
+    CouldNotParseFloat(#[from] ParseFloatError),
+    #[error("couldn't parse charge: {0}")]
+    CouldNotParseCharge(String),
     #[error("Line {0:?} too short to include essential data")]
     LineTooShort(String),
 }
 
 type Result<T, E = PdbParseErr> = std::result::Result<T, E>;
 
-struct PdbRecordParser<'t> {
+pub struct PdbRecordParser<'t> {
     lines: Peekable<Lines<'t>>,
     current_line: Option<&'t str>,
 }
 
 impl<'t> PdbRecordParser<'t> {
-    fn try_continuation(&mut self, prefix: &str) -> Option<&'t str> {
+    pub fn from_str(s: &'t str) -> Self {
+        Self {
+            lines: s.lines().peekable(),
+            current_line: None,
+        }
+    }
+
+    fn get_continuation(&mut self, prefix: &str) -> Option<&'t str> {
         let &continuation_line = self.lines.peek()?;
         if continuation_line.starts_with(prefix) {
             self.lines.next()
@@ -226,7 +530,7 @@ impl<'t> PdbRecordParser<'t> {
         }
     }
 
-    fn get_continuation(&mut self, record_name: &'static str) -> Result<&'t str> {
+    fn try_continuation(&mut self, record_name: &'static str) -> Result<&'t str> {
         if record_name.len() > 6 {
             panic!("record_name must be 6 characters or less")
         }
@@ -267,46 +571,81 @@ impl<'t> PdbRecordParser<'t> {
         PdbRecordParser::split_line(self.get_current_line(), fields)
     }
 
-    fn get_field(&self, range: RangeInclusive<usize>) -> Result<&'t str> {
+    /// Get a field from the current line if the field exists
+    fn try_field(&self, range: RangeInclusive<usize>) -> Result<&'t str> {
         let line = self.get_current_line();
         line.get(range)
             .ok_or(PdbParseErr::LineTooShort(line.to_owned()))
     }
 
-    fn parse_seqres(&mut self) -> Result<PdbRecord> {
-        let ser_num: i16 = self.get_field(7..=9)?.parse()?;
-        let chain_id = self.get_field(11..=11)?.chars().next().unwrap();
-        let num_res: usize = self.get_field(13..=16)?.parse()?;
+    /// Get a field from the current line if the field exists and is not empty
+    fn get_field(&self, range: RangeInclusive<usize>) -> Option<&'t str> {
+        match self.try_field(range).map(str::trim) {
+            Ok("") => None,
+            Ok(s) => Some(s),
+            Err(_) => None,
+        }
+    }
 
-        let mut res_names: Vec<&str> = Vec::with_capacity(num_res);
-        let seqres_resname_ranges = [
-            19..=21,
-            23..=25,
-            27..=29,
-            31..=33,
-            35..=37,
-            39..=41,
-            43..=45,
-            47..=49,
-            51..=53,
-            56..=58,
-            59..=61,
-            63..=65,
-            67..=69,
-        ];
-        res_names.extend(self.split_current_line(seqres_resname_ranges.clone()));
+    fn try_parsed_field<F>(&self, range: RangeInclusive<usize>) -> Result<F, PdbParseErr>
+    where
+        F: FromStr,
+        F::Err: Into<PdbParseErr>,
+        PdbParseErr: From<F::Err>,
+    {
+        Ok(self.try_field(range)?.trim().parse()?)
+    }
 
-        (ser_num + 1..)
+    fn get_parsed_field<F>(&self, range: RangeInclusive<usize>) -> Result<Option<F>, PdbParseErr>
+    where
+        F: FromStr,
+        F::Err: Into<PdbParseErr>,
+        PdbParseErr: From<F::Err>,
+    {
+        Ok(self.get_field(range).map(str::parse).transpose()?)
+    }
+
+    fn try_char_field(&self, index: usize) -> Result<char, PdbParseErr> {
+        Ok(self.try_field(index..=index)?.chars().next().unwrap())
+    }
+
+    fn get_char_field(&self, index: usize) -> Option<char> {
+        self.get_field(index..=index)
+            .map(|s| s.chars().next().unwrap())
+    }
+
+    fn parse_seqres(&mut self) -> Result<PdbRecord<&'t str>> {
+        let ser_num: i16 = self.try_parsed_field(7..=9)?;
+        let chain_id = self.try_char_field(11)?;
+        let num_res: usize = self.try_parsed_field(13..=16)?;
+
+        let res_names: Vec<&'t str> = [self.get_current_line()]
             .into_iter()
-            .map_while(|i| {
-                self.try_continuation(&format!("SEQRES {i: >3} {chain_id} {num_res: >4}"))
-            })
-            .for_each(|line| {
-                res_names.extend(PdbRecordParser::split_line(
+            .chain((ser_num + 1..).into_iter().map_while(|i| {
+                self.get_continuation(&format!("SEQRES {i: >3} {chain_id} {num_res: >4}"))
+            }))
+            .map(|line| {
+                PdbRecordParser::split_line(
                     line,
-                    seqres_resname_ranges.clone(),
-                ))
-            });
+                    [
+                        19..=21,
+                        23..=25,
+                        27..=29,
+                        31..=33,
+                        35..=37,
+                        39..=41,
+                        43..=45,
+                        47..=49,
+                        51..=53,
+                        55..=57,
+                        59..=61,
+                        63..=65,
+                        67..=69,
+                    ],
+                )
+            })
+            .flatten()
+            .collect();
 
         if res_names.len() != num_res {
             Err(PdbParseErr::SeqresResnameCountMismatch {
@@ -321,7 +660,37 @@ impl<'t> PdbRecordParser<'t> {
         }
     }
 
-    fn get_record(&mut self) -> Result<PdbRecord> {
+    fn parse_atomrecord(&mut self) -> Result<AtomRecord<&'t str>> {
+        let atom = AtomRecord {
+            serial: self.try_parsed_field(6..=10)?,
+            name: self.try_field(12..=15)?.trim(),
+            alt_loc: self.try_char_field(16)?,
+            res_name: self.try_field(17..=19)?.trim(),
+            chain_id: self.try_char_field(21)?,
+            res_seq: self.try_parsed_field(22..=25)?,
+            i_code: self.try_char_field(26)?,
+            x: self.try_parsed_field(30..=37)?,
+            y: self.try_parsed_field(38..=45)?,
+            z: self.try_parsed_field(47..=53)?,
+            occupancy: self.try_parsed_field(54..=59)?,
+            temp_factor: self.try_parsed_field(60..=65)?,
+            element: self.try_field(76..=77)?.trim(),
+            charge: {
+                match self.try_field(78..=79) {
+                    Ok(s) if &s[1..] == "+" => s[..1].parse()?,
+                    Ok(s) if &s[1..] == "-" => -s[..1].parse()?,
+                    Ok(s) if s.trim() == "" => 0,
+                    Ok(s) => Err(PdbParseErr::CouldNotParseCharge(s.to_owned()))?,
+                    Err(PdbParseErr::LineTooShort(_)) => 0,
+                    Err(e) => Err(e)?,
+                }
+            },
+        };
+
+        Ok(atom)
+    }
+
+    fn get_record(&mut self) -> Result<PdbRecord<&'t str>> {
         let line = self.get_current_line();
         match &line[..6] {
             "HEADER" => Ok(PdbRecord::HEADER),
@@ -339,11 +708,14 @@ impl<'t> PdbRecordParser<'t> {
             "REVDAT" => Ok(PdbRecord::REVDAT),
             "SPRSDE" => Ok(PdbRecord::SPRSDE),
             "JRNL  " => Ok(PdbRecord::JRNL),
-            "REMARK" => Ok(PdbRecord::REMARK),
+            "REMARK" => Ok(PdbRecord::REMARK {
+                remark_num: self.try_field(7..=9)?.trim().parse()?,
+                remark: self.try_field(11..=78)?,
+            }),
             "DBREF " => Ok(PdbRecord::DBREF),
             "DBREF1" => {
-                let dbref1 = &line;
-                let dbref2 = self.get_continuation("DBREF2");
+                let _dbref1: &'t str = line;
+                let _dbref2: &'t str = self.try_continuation("DBREF2")?;
                 Ok(PdbRecord::DBREF)
             }
             "SEQADV" => Ok(PdbRecord::SEQADV),
@@ -359,7 +731,16 @@ impl<'t> PdbRecordParser<'t> {
             "LINK  " => Ok(PdbRecord::LINK),
             "CISPEP" => Ok(PdbRecord::CISPEP),
             "SITE  " => Ok(PdbRecord::SITE),
-            "CRYST1" => Ok(PdbRecord::CRYST1),
+            "CRYST1" => Ok(PdbRecord::CRYST1 {
+                a: self.try_parsed_field(6..=14)?,
+                b: self.try_parsed_field(15..=23)?,
+                c: self.try_parsed_field(24..=32)?,
+                alpha: self.try_parsed_field(33..=39)?,
+                beta: self.try_parsed_field(40..=46)?,
+                gamma: self.try_parsed_field(47..=53)?,
+                space_group: self.try_field(55..=65)?,
+                z: self.try_parsed_field(66..=69)?,
+            }),
             "ORIGX1" => Ok(PdbRecord::ORIGXn),
             "ORIGX2" => Ok(PdbRecord::ORIGXn),
             "ORIGX3" => Ok(PdbRecord::ORIGXn),
@@ -369,13 +750,25 @@ impl<'t> PdbRecordParser<'t> {
             "MTRIX1" => Ok(PdbRecord::MTRIXn),
             "MTRIX2" => Ok(PdbRecord::MTRIXn),
             "MTRIX3" => Ok(PdbRecord::MTRIXn),
-            "MODEL " => Ok(PdbRecord::MODEL),
-            "ATOM  " => Ok(PdbRecord::ATOM),
+            "MODEL " => Ok(PdbRecord::MODEL(self.try_parsed_field(10..=13)?)),
+            "ATOM  " => Ok(PdbRecord::ATOM(self.parse_atomrecord()?)),
             "ANISOU" => Ok(PdbRecord::ANISOU),
-            "TER   " => Ok(PdbRecord::TER),
-            "HETATM" => Ok(PdbRecord::HETATM),
+            "TER   " => Ok(PdbRecord::TER {
+                serial: self.try_parsed_field(6..=10)?,
+                res_name: self.try_field(17..=19)?.trim(),
+                chain_id: self.try_char_field(21)?,
+                res_seq: self.try_parsed_field(22..=25)?,
+                i_code: self.try_char_field(26)?,
+            }),
+            "HETATM" => Ok(PdbRecord::HETATM(self.parse_atomrecord()?)),
             "ENDMDL" => Ok(PdbRecord::ENDMDL),
-            "CONECT" => Ok(PdbRecord::CONECT),
+            "CONECT" => Ok(PdbRecord::CONECT {
+                parent: self.try_field(6..=10)?.trim(),
+                bond1: self.get_field(11..=15),
+                bond2: self.get_field(16..=20),
+                bond3: self.get_field(21..=25),
+                bond4: self.get_field(26..=30),
+            }),
             "MASTER" => Ok(PdbRecord::MASTER),
             "END   " => Ok(PdbRecord::END),
             s => Err(PdbParseErr::UnknownRecordType(s.to_owned())),
@@ -384,7 +777,7 @@ impl<'t> PdbRecordParser<'t> {
 }
 
 impl<'t> Iterator for PdbRecordParser<'t> {
-    type Item = Result<PdbRecord>;
+    type Item = Result<PdbRecord<&'t str>>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.current_line = self.lines.next();
