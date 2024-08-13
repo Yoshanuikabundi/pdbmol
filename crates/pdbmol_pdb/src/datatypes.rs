@@ -661,15 +661,6 @@ impl<'t> PdbRecordParser<'t> {
             .ok_or(PdbParseErr::LineTooShort(line.to_owned()))
     }
 
-    /// Get a field from the current line if the field exists and is not empty
-    fn get_field(&self, range: RangeInclusive<usize>) -> Option<&'t str> {
-        match self.try_field(range).map(str::trim) {
-            Ok("") => None,
-            Ok(s) => Some(s),
-            Err(_) => None,
-        }
-    }
-
     fn try_parsed_field<F>(&self, range: RangeInclusive<usize>) -> Result<F, PdbParseErr>
     where
         F: FromStr,
@@ -679,22 +670,8 @@ impl<'t> PdbRecordParser<'t> {
         Ok(self.try_field(range)?.trim().parse()?)
     }
 
-    fn get_parsed_field<F>(&self, range: RangeInclusive<usize>) -> Result<Option<F>, PdbParseErr>
-    where
-        F: FromStr,
-        F::Err: Into<PdbParseErr>,
-        PdbParseErr: From<F::Err>,
-    {
-        Ok(self.get_field(range).map(str::parse).transpose()?)
-    }
-
     fn try_char_field(&self, index: usize) -> Result<char, PdbParseErr> {
         Ok(self.try_field(index..=index)?.chars().next().unwrap())
-    }
-
-    fn get_char_field(&self, index: usize) -> Option<char> {
-        self.get_field(index..=index)
-            .map(|s| s.chars().next().unwrap())
     }
 
     fn parse_seqres(&mut self) -> Result<PdbRecord<&'t str>> {
