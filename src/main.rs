@@ -58,6 +58,9 @@ fn main() {
                         }
                     }
                 }
+                for read_line in lines_iter {
+                    println!("Skipping {read_line:?}");
+                }
             }
         };
     }
