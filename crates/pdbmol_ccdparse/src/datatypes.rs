@@ -3,6 +3,7 @@
 use std::{collections::HashMap, fmt::Debug, str::FromStr};
 
 use pdbmol_cif::ParsedDataBlock;
+use pdbmol_types::{stereo::AtomStereo, stereo::BondStereo};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LinkingType {
@@ -121,26 +122,6 @@ impl<'s> TryFrom<&ParsedDataBlock<'s>> for Residue<'s> {
             atoms: Atoms::try_from(value)?,
             bonds: Bonds::try_from(value)?,
         })
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum AtomStereo {
-    R,
-    S,
-    None,
-}
-
-impl FromStr for AtomStereo {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "R" => Ok(Self::R),
-            "S" => Ok(Self::S),
-            "N" => Ok(Self::None),
-            s => Err(format!("AtomStereo should be R, S or N, not {s}")),
-        }
     }
 }
 
@@ -298,26 +279,6 @@ fn try_as_bool(value: &str) -> Result<bool, String> {
         "Y" => Ok(true),
         "N" => Ok(false),
         s => Err(format!("bool should be Y or N, not {s}")),
-    }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum BondStereo {
-    E,
-    Z,
-    None,
-}
-
-impl FromStr for BondStereo {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "E" => Ok(Self::E),
-            "Z" => Ok(Self::Z),
-            "N" => Ok(Self::None),
-            s => Err(format!("BondStereo should be E, Z or N, not {s}")),
-        }
     }
 }
 

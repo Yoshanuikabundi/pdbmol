@@ -199,7 +199,7 @@ impl Element {
     ///
     /// Note that the atomic number is equal to the discriminant:
     /// ```rust
-    /// # use pdbmol_data::Element;
+    /// # use pdbmol_types::Element;
     /// assert_eq!(Element::Hydrogen as u8, Element::Hydrogen.atomic_number())
     /// ```
     pub fn atomic_number(&self) -> u8 {
@@ -219,12 +219,21 @@ impl Element {
     }
 
     /// Get the element with the given symbol.
-    pub fn from_symbol(symbol: &str) -> Option<Self> {
+    pub fn from_symbol(symbol: impl AsRef<[u8]>) -> Option<Self> {
         Self::SYMBOLS
             .into_iter()
-            .position(|s| s == symbol)
+            .position(|s| AsRef::<[u8]>::as_ref(s) == symbol.as_ref())
             .map(|i| i as u8 + 1)
             .and_then(Self::from_repr)
+    }
+
+    /// Get the element with the given symbol case insensitively.
+    pub fn from_uncased_symbol(symbol: impl AsRef<[u8]>) -> Option<Self> {
+        match symbol.as_ref() {
+            [c] => Self::from_symbol([c.to_ascii_uppercase()]),
+            [c1, c2] => Self::from_symbol([c1.to_ascii_uppercase(), c2.to_ascii_lowercase()]),
+            _ => None,
+        }
     }
 
     /// Get the name of the element.
@@ -236,7 +245,7 @@ impl Element {
     ///
     /// Note that the element can also be constructed directly:
     /// ```rust
-    /// # use pdbmol_data::Element;
+    /// # use pdbmol_types::Element;
     /// assert_eq!(Element::from_name("Vanadium"), Some(Element::Vanadium))
     /// ```
     pub fn from_name(name: &str) -> Option<Self> {
@@ -272,14 +281,21 @@ impl Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use itertools::{EitherOrBoth, Itertools};
     use strum::IntoEnumIterator;
 
     #[test]
-    fn test_element_atomic_numbers() {
-        for n in 1..=118 {
-            let element = Element::from_atomic_number(n).unwrap();
-            assert_eq!(n, element.atomic_number());
+    /// Check that there are masses, symbols, radii etc for every element
+    fn data_are_complete() {
+        assert_eq!(Element::SYMBOLS.len(), Element::iter().count());
+        assert_eq!(Element::RADII.len(), Element::iter().count());
+        assert_eq!(Element::MASSES.len(), Element::iter().count());
+    }
+
+    #[test]
+    fn test_atomic_numbers() {
+        for element in Element::iter() {
+            let n = element.atomic_number();
+            assert_eq!(Element::from_atomic_number(n).unwrap(), element);
         }
 
         assert_eq!(Element::Hydrogen.atomic_number(), 1);
@@ -293,9 +309,17 @@ mod tests {
     }
 
     #[test]
+    /// Symbol handling code assumes all symbols are ASCII; if this changes,
+    /// they should be re-written
+    fn element_symbols_are_ascii() {
+        for symbol in Element::SYMBOLS {
+            assert!(symbol.is_ascii());
+        }
+    }
+
+    #[test]
     fn test_element_symbols() {
-        for n in 1..=118 {
-            let element = Element::from_atomic_number(n).unwrap();
+        for element in Element::iter() {
             let symbol = element.symbol();
             assert_eq!(Element::from_symbol(symbol).unwrap(), element);
         }
@@ -306,27 +330,66 @@ mod tests {
         assert_eq!(Element::Manganese.symbol(), "Mn");
         assert_eq!(Element::Oganesson.symbol(), "Og");
 
-        assert_eq!(Element::Hydrogen, Element::from_symbol("H").unwrap());
-        assert_eq!(Element::Vanadium, Element::from_symbol("V").unwrap());
-        assert_eq!(Element::Sodium, Element::from_symbol("Na").unwrap());
-        assert_eq!(Element::Manganese, Element::from_symbol("Mn").unwrap());
-        assert_eq!(Element::Oganesson, Element::from_symbol("Og").unwrap());
+        assert_eq!(Element::from_symbol("H"), Some(Element::Hydrogen));
+        assert_eq!(Element::from_symbol("V"), Some(Element::Vanadium));
+        assert_eq!(Element::from_symbol("Na"), Some(Element::Sodium));
+        assert_eq!(Element::from_symbol("Mn"), Some(Element::Manganese));
+        assert_eq!(Element::from_symbol("Og"), Some(Element::Oganesson));
+
+        assert_eq!(Element::from_symbol("Zz"), None);
+        assert_eq!(Element::from_symbol("h"), None);
+        assert_eq!(Element::from_symbol("mn"), None);
+        assert_eq!(Element::from_symbol("OG"), None);
+        assert_eq!(Element::from_symbol("nA"), None);
+        assert_eq!(Element::from_symbol("Hydrogen"), None);
+        assert_eq!(Element::from_symbol("νάτριο"), None);
+        assert_eq!(Element::from_symbol(""), None);
+        assert_eq!(Element::from_symbol("\u{1053}"), None); //  Cyrillic Н
+        assert_eq!(Element::from_symbol("\u{1085}"), None); //  Cyrillic н
     }
 
     #[test]
-    fn test_element_masses() {
-        for either_or_both in Element::iter().zip_longest(Element::MASSES) {
-            match either_or_both {
-                EitherOrBoth::Both(element, mass) => {
-                    assert_eq!(element.mass(), mass);
-                }
-                EitherOrBoth::Left(_element) => {
-                    panic!("More elements than masses");
-                }
-                EitherOrBoth::Right(_mass) => {
-                    panic!("More masses than elements");
-                }
+    /// Exhaustively test all casings of symbols with from_uncased_symbol
+    fn test_uncased_element_symbols() {
+        fn switch_case(s: &str) -> String {
+            s.chars()
+                .map(|c| {
+                    if c.is_ascii_uppercase() {
+                        c.to_ascii_lowercase()
+                    } else {
+                        c.to_ascii_uppercase()
+                    }
+                })
+                .collect()
+        }
+
+        for element in Element::iter() {
+            let (element, symbol) = (Some(element), element.symbol());
+
+            for change_case_fn in [
+                str::to_lowercase,
+                str::to_uppercase,
+                str::to_string, // Unchanged case
+                switch_case,
+            ] {
+                assert_eq!(
+                    Element::from_uncased_symbol(change_case_fn(symbol)),
+                    element
+                );
             }
+        }
+
+        assert_eq!(Element::from_uncased_symbol(""), None);
+        assert_eq!(Element::from_uncased_symbol("Hydrogen"), None);
+        assert_eq!(Element::from_uncased_symbol("Zz"), None);
+        assert_eq!(Element::from_uncased_symbol("\u{1053}"), None); //  Cyrillic Н
+        assert_eq!(Element::from_uncased_symbol("\u{1085}"), None); //  Cyrillic н
+    }
+
+    #[test]
+    fn test_masses() {
+        for (element, mass) in Element::iter().zip(Element::MASSES) {
+            assert_eq!(element.mass(), mass)
         }
 
         for (element, mass) in [
@@ -339,26 +402,16 @@ mod tests {
     }
 
     #[test]
-    fn test_element_radii() {
-        for either_or_both in Element::iter().zip_longest(Element::RADII) {
-            match either_or_both {
-                EitherOrBoth::Both(element, radius) => {
-                    assert_eq!(element.radius(), radius);
-                }
-                EitherOrBoth::Left(_element) => {
-                    panic!("More elements than radii");
-                }
-                EitherOrBoth::Right(_radius) => {
-                    panic!("More radii than elements");
-                }
-            }
+    fn test_radii() {
+        for (element, radius) in Element::iter().zip(Element::RADII) {
+            assert_eq!(element.radius(), radius)
         }
     }
 
     #[test]
     fn test_element_names() {
-        for n in 1..=118 {
-            let element = Element::from_atomic_number(n).unwrap();
+        // Check `element.name()` never panics
+        for element in Element::iter() {
             element.name();
         }
 

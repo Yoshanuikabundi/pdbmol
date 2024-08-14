@@ -1,3 +1,4 @@
+use pdbmol_types::Element;
 use std::{
     fmt::Display,
     iter::Peekable,
@@ -21,7 +22,7 @@ pub struct AtomRecord<S = String> {
     z: f32,
     occupancy: f32,
     temp_factor: f32,
-    element: S,
+    element: Element,
     charge: i8,
 }
 
@@ -49,6 +50,7 @@ impl<S: Display> Display for AtomRecord<S> {
             std::cmp::Ordering::Greater => format!("{charge}+"),
         };
         let name = format!("{name: <3}");
+        let element = element.symbol().to_uppercase();
         write!(f, "{serial: >5} {name: >4}{alt_loc}{res_name: >3} ")?;
         write!(f, "{chain_id}{res_seq: >4}{i_code}   ")?;
         write!(f, "{x: >8.3}{y: >8.3}{z: >8.3}")?;
@@ -587,6 +589,8 @@ pub enum PdbParseErr {
     CouldNotParseCharge(String),
     #[error("Line {0:?} too short to include essential data")]
     LineTooShort(String),
+    #[error("Element symbol {0} is unknown")]
+    UnknownElement(String),
 }
 
 type Result<T, E = PdbParseErr> = std::result::Result<T, E>;
@@ -732,7 +736,11 @@ impl<'t> PdbRecordParser<'t> {
             z: self.try_parsed_field(47..=53)?,
             occupancy: self.try_parsed_field(54..=59)?,
             temp_factor: self.try_parsed_field(60..=65)?,
-            element: self.try_field(76..=77)?.trim(),
+            element: {
+                let symbol = self.try_field(76..=77)?.trim();
+                Element::from_uncased_symbol(symbol)
+                    .ok_or_else(|| PdbParseErr::UnknownElement(symbol.to_owned()))?
+            },
             charge: {
                 match self.try_field(78..=79) {
                     Ok(s) if &s[1..] == "+" => s[..1].parse()?,

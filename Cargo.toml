@@ -11,7 +11,7 @@ license = "MIT OR Apache-2.0"
 pdbmol_cif = { path = "crates/pdbmol_cif" }
 pdbmol_ccd = { path = "crates/pdbmol_ccd" }
 pdbmol_pdb = { path = "crates/pdbmol_pdb" }
-pdbmol_data = { path = "crates/pdbmol_data" }
+pdbmol_types = { path = "crates/pdbmol_types" }
 
 [workspace]
 members = ["crates/*"]

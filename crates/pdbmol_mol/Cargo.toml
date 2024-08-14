@@ -1,11 +1,12 @@
 [package]
-name = "pdbmol_pdb"
+name = "pdbmol_mol"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-thiserror = "1.0.63"
 pdbmol_types = { path = "../pdbmol_types" }
+pdbmol_pdb = { path = "../pdbmol_pdb" }
+pdbmol_ccdparse = { path = "../pdbmol_ccdparse" }
 
 [lints]
 workspace = true

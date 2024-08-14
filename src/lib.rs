@@ -3,7 +3,7 @@
 #[doc(inline)]
 pub use pdbmol_ccd as ccd;
 
-pub use pdbmol_data::Element;
+pub use pdbmol_types::Element;
 
 pub mod parser {
     #[doc(inline)]
