@@ -10,20 +10,20 @@ use thiserror::Error;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AtomRecord<S = String> {
-    serial: i32,
-    name: S,
-    alt_loc: char,
-    res_name: S,
-    chain_id: char,
-    res_seq: i32,
-    i_code: char,
-    x: f32,
-    y: f32,
-    z: f32,
-    occupancy: f32,
-    temp_factor: f32,
-    element: Element,
-    charge: i8,
+    pub serial: i32,
+    pub name: S,
+    pub alt_loc: char,
+    pub res_name: S,
+    pub chain_id: char,
+    pub res_seq: i32,
+    pub i_code: char,
+    pub x: f32,
+    pub y: f32,
+    pub z: f32,
+    pub occupancy: f32,
+    pub temp_factor: f32,
+    pub element: Element,
+    pub charge: i8,
 }
 
 impl<S: Display> Display for AtomRecord<S> {
@@ -321,7 +321,7 @@ pub enum PdbRecord<S = String> {
     ///
     /// Optional in deposited files, mandatory if non-standard group appears and
     /// if LINK or SSBOND records exist.
-    Conect { parent: S, bonds: Vec<S> },
+    Conect { parent: i32, bonds: Vec<i32> },
     /// Control record for bookkeeping.
     ///
     /// Mandatory in deposited files.
@@ -437,14 +437,11 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
             PdbRecord::EndMdl => writeln!(f, "ENDMDL"),
             PdbRecord::Conect { parent, bonds } => {
                 #[allow(clippy::get_first)]
-                let bond1 = bonds.get(0).cloned().unwrap_or_default();
-                let bond2 = bonds.get(1).cloned().unwrap_or_default();
-                let bond3 = bonds.get(2).cloned().unwrap_or_default();
-                let bond4 = bonds.get(3).cloned().unwrap_or_default();
-                writeln!(
-                    f,
-                    "CONECT{parent: >5}{bond1: >5}{bond2: >5}{bond3: >5}{bond4: >5}"
-                )
+                write!(f, "CONECT{parent: >5}")?;
+                for bond in bonds {
+                    write!(f, "{bond: >5}")?;
+                }
+                writeln!(f)
             }
         }
     }
@@ -557,10 +554,7 @@ impl From<PdbRecord<&str>> for PdbRecord<String> {
             },
             PdbRecord::HetAtm(record) => PdbRecord::HetAtm(record.to_owned()),
             PdbRecord::EndMdl => PdbRecord::EndMdl,
-            PdbRecord::Conect { parent, bonds } => PdbRecord::Conect {
-                parent: parent.to_owned(),
-                bonds: bonds.into_iter().map(str::to_owned).collect(),
-            },
+            PdbRecord::Conect { parent, bonds } => PdbRecord::Conect { parent, bonds },
             PdbRecord::Master => PdbRecord::Master,
             PdbRecord::End => PdbRecord::End,
         }
@@ -842,10 +836,11 @@ impl<'t> PdbRecordParser<'t> {
             "HETATM" => Ok(PdbRecord::HetAtm(self.parse_atomrecord()?)),
             "ENDMDL" => Ok(PdbRecord::EndMdl),
             "CONECT" => Ok(PdbRecord::Conect {
-                parent: self.try_field(6..=10)?.trim(),
+                parent: self.try_parsed_field(6..=10)?,
                 bonds: self
                     .split_current_line([11..=15, 16..=20, 21..=25, 26..=30])
-                    .collect(),
+                    .map(|s| s.parse().map_err(Into::into))
+                    .collect::<Result<_>>()?,
             }),
             "MASTER" => Ok(PdbRecord::Master),
             "END   " => Ok(PdbRecord::End),
