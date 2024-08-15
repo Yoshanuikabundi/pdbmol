@@ -15,14 +15,7 @@ mod increase;
 
 impl From<CrystallographicUnitCell> for RestrictedTriclinicUnitCell {
     fn from(value: CrystallographicUnitCell) -> Self {
-        let CrystallographicUnitCell {
-            a,
-            b,
-            c,
-            alpha,
-            beta,
-            gamma,
-        } = value;
+        let CrystallographicUnitCell { a, b, c, alpha, beta, gamma } = value;
 
         let lx = a;
         let xy = b * gamma.cos();
@@ -31,10 +24,7 @@ impl From<CrystallographicUnitCell> for RestrictedTriclinicUnitCell {
         let yz = b * c * alpha.cos() - xy * xz;
         let lz = (c.powi(2) - xz.powi(2) - yz.powi(2)).sqrt();
 
-        Self {
-            size_parameters: [lx, ly, lz],
-            tilt_parameters: [xy, xz, yz],
-        }
+        Self { size_parameters: [lx, ly, lz], tilt_parameters: [xy, xz, yz] }
     }
 }
 
@@ -52,14 +42,7 @@ impl From<RestrictedTriclinicUnitCell> for CrystallographicUnitCell {
         let beta = (xz / c).acos();
         let gamma = (xy / b).acos();
 
-        Self {
-            a,
-            b,
-            c,
-            alpha,
-            beta,
-            gamma,
-        }
+        Self { a, b, c, alpha, beta, gamma }
     }
 }
 
@@ -191,10 +174,6 @@ impl RestrictedTriclinicUnitCell {
         debug_assert!(w[0] < 128. * f32::EPSILON);
         debug_assert!(w[1] < 128. * f32::EPSILON);
 
-        OrthogonalUnitCell {
-            x: u[0],
-            y: v[1],
-            z: w[2],
-        }
+        OrthogonalUnitCell { x: u[0], y: v[1], z: w[2] }
     }
 }

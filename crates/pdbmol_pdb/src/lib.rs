@@ -10,6 +10,10 @@ pub fn load(
 
 pub fn parse(s: &str) -> Vec<Result<PdbRecord, PdbParseErr>> {
     PdbRecordParser::from_str(s)
-        .map(|result| result.map(|record| record.into()).map_err(Into::into))
+        .map(|result| {
+            result
+                .map(|record| record.into())
+                .map_err(Into::into)
+        })
         .collect()
 }

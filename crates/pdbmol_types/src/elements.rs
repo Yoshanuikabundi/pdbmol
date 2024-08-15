@@ -418,12 +418,34 @@ mod tests {
         assert_eq!(Element::Hydrogen.name(), "Hydrogen");
         assert_eq!(Element::Oganesson.name(), "Oganesson");
 
-        assert_eq!(Element::from_atomic_number(1).unwrap().name(), "Hydrogen");
-        assert_eq!(Element::from_atomic_number(6).unwrap().name(), "Carbon");
-        assert_eq!(Element::from_atomic_number(29).unwrap().name(), "Copper");
-        assert_eq!(Element::from_atomic_number(92).unwrap().name(), "Uranium");
         assert_eq!(
-            Element::from_atomic_number(118).unwrap().name(),
+            Element::from_atomic_number(1)
+                .unwrap()
+                .name(),
+            "Hydrogen"
+        );
+        assert_eq!(
+            Element::from_atomic_number(6)
+                .unwrap()
+                .name(),
+            "Carbon"
+        );
+        assert_eq!(
+            Element::from_atomic_number(29)
+                .unwrap()
+                .name(),
+            "Copper"
+        );
+        assert_eq!(
+            Element::from_atomic_number(92)
+                .unwrap()
+                .name(),
+            "Uranium"
+        );
+        assert_eq!(
+            Element::from_atomic_number(118)
+                .unwrap()
+                .name(),
             "Oganesson"
         );
 

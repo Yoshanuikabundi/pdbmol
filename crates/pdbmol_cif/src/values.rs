@@ -31,10 +31,7 @@ impl<'a> Value<'a> {
     /// Get the value if it is an integer
     pub fn try_as_int(&self) -> Result<numeric::Integer, &'static str> {
         match self {
-            Self::Numeric(Numeric {
-                value: Number::Int(i),
-                esd: None,
-            }) => Ok(*i),
+            Self::Numeric(Numeric { value: Number::Int(i), esd: None }) => Ok(*i),
             _ => Err("Not an int"),
         }
     }
@@ -42,17 +39,16 @@ impl<'a> Value<'a> {
     /// Get the value if it is an integer
     pub fn try_as_float(&self) -> Result<numeric::Float, &'static str> {
         match self {
-            Self::Numeric(Numeric {
-                value: Number::Float(i),
-                esd: None,
-            }) => Ok(*i),
+            Self::Numeric(Numeric { value: Number::Float(i), esd: None }) => Ok(*i),
             _ => Err("Not a float"),
         }
     }
 }
 
 fn numeric<'s>(input: &mut &'s str) -> PResult<Value<'s>> {
-    Numeric::parser.map(Value::Numeric).parse_next(input)
+    Numeric::parser
+        .map(Value::Numeric)
+        .parse_next(input)
 }
 
 fn eol_agnostic_value<'s>(input: &mut &'s str) -> PResult<Value<'s>> {

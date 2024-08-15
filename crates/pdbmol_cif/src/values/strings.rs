@@ -106,18 +106,24 @@ mod tests {
     fn test_eol_text_field() {
         let mut stream = "\n;this is a text field\n;";
 
-        charsets::eol.parse_next(&mut stream).unwrap();
+        charsets::eol
+            .parse_next(&mut stream)
+            .unwrap();
         let output = eol_text_field.parse(stream);
         assert_eq!(output, Ok("this is a text field\n"));
 
         let mut stream = "\n;this is a text field;";
 
-        charsets::eol.parse_next(&mut stream).unwrap();
+        charsets::eol
+            .parse_next(&mut stream)
+            .unwrap();
         assert!(eol_text_field.parse(stream).is_err());
 
         let mut stream = "\n;this is a text field;\nit has multiple lines\n;";
 
-        charsets::eol.parse_next(&mut stream).unwrap();
+        charsets::eol
+            .parse_next(&mut stream)
+            .unwrap();
         let output = eol_text_field.parse(stream);
         assert_eq!(output, Ok("this is a text field;\nit has multiple lines\n"));
     }

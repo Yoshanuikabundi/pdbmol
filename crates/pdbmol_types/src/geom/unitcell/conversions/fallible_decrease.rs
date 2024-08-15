@@ -23,10 +23,7 @@ impl TryFrom<TriclinicUnitCell> for RestrictedTriclinicUnitCell {
     /// orientation, see [`RestrictedTriclinicUnitCell::from()`]
     fn try_from(value: TriclinicUnitCell) -> Result<Self, Self::Error> {
         if let TriclinicUnitCell([[lx, 0.0, 0.0], [xy, ly, 0.0], [xz, yz, lz]]) = value {
-            Ok(Self {
-                size_parameters: [lx, ly, lz],
-                tilt_parameters: [xy, xz, yz],
-            })
+            Ok(Self { size_parameters: [lx, ly, lz], tilt_parameters: [xy, xz, yz] })
         } else {
             Err(NonReducedOrientationErr)
         }

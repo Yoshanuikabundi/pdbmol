@@ -5,7 +5,11 @@ fn reads_and_writes_standard_pdb() {
         let pdb_str = std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("{path:?}"));
         let records = pdbmol_pdb::parse(&pdb_str);
 
-        let errors: Vec<_> = records.iter().cloned().filter_map(Result::err).collect();
+        let errors: Vec<_> = records
+            .iter()
+            .cloned()
+            .filter_map(Result::err)
+            .collect();
         assert!(
             errors.is_empty(),
             "errors encountered while parsing pdb records: {errors:#?}"

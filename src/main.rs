@@ -40,7 +40,11 @@ fn main() {
                     .iter()
                     .map(|r| r.as_ref().unwrap())
                     .map(|record| format!("{record}"))
-                    .flat_map(|s| s.lines().map(ToOwned::to_owned).collect::<Vec<_>>())
+                    .flat_map(|s| {
+                        s.lines()
+                            .map(ToOwned::to_owned)
+                            .collect::<Vec<_>>()
+                    })
                 {
                     println!("         {written_line:?}");
                     loop {

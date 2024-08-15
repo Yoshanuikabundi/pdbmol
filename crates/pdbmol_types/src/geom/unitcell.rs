@@ -54,17 +54,7 @@ pub trait UnitCell: Into<TriclinicUnitCell> + TryFrom<TriclinicUnitCell> + Clone
         beta: f32,
         gamma: f32,
     ) -> Result<Self, Self::Error> {
-        Self::try_from(
-            CrystallographicUnitCell {
-                a,
-                b,
-                c,
-                alpha,
-                beta,
-                gamma,
-            }
-            .into(),
-        )
+        Self::try_from(CrystallographicUnitCell { a, b, c, alpha, beta, gamma }.into())
     }
 
     fn from_lengths_and_angles_deg(
@@ -98,7 +88,9 @@ pub trait UnitCell: Into<TriclinicUnitCell> + TryFrom<TriclinicUnitCell> + Clone
     }
 
     fn from_image_distance_and_shape(d: f32, shape: UnitCellShape) -> Result<Self, Self::Error> {
-        shape.vectors_with_image_distance(d).try_into()
+        shape
+            .vectors_with_image_distance(d)
+            .try_into()
     }
 
     fn to_general_triclinic(&self) -> TriclinicUnitCell {
@@ -132,7 +124,11 @@ pub trait UnitCell: Into<TriclinicUnitCell> + TryFrom<TriclinicUnitCell> + Clone
     }
 
     fn has_tilt(&self) -> bool {
-        OrthogonalUnitCell::try_from(self.to_general_triclinic().restrict_orientation()).is_err()
+        OrthogonalUnitCell::try_from(
+            self.to_general_triclinic()
+                .restrict_orientation(),
+        )
+        .is_err()
     }
 
     fn scale(&self, scale: f32) -> Self {

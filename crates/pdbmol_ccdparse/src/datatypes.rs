@@ -266,12 +266,30 @@ fn get_xyz(
     let z2 = get_coords_with_key(map, "chem_comp_atom.pdbx_model_Cartn_z_ideal");
     match (x1, y1, z1, x2, y2, z2) {
         (Ok(x1), Ok(y1), Ok(z1), Ok(x2), Ok(y2), Ok(z2)) => {
-            let x1_count = x1.iter().filter(|o| o.is_some()).count();
-            let x2_count = x2.iter().filter(|o| o.is_some()).count();
-            let y1_count = y1.iter().filter(|o| o.is_some()).count();
-            let y2_count = y2.iter().filter(|o| o.is_some()).count();
-            let z1_count = z1.iter().filter(|o| o.is_some()).count();
-            let z2_count = z2.iter().filter(|o| o.is_some()).count();
+            let x1_count = x1
+                .iter()
+                .filter(|o| o.is_some())
+                .count();
+            let x2_count = x2
+                .iter()
+                .filter(|o| o.is_some())
+                .count();
+            let y1_count = y1
+                .iter()
+                .filter(|o| o.is_some())
+                .count();
+            let y2_count = y2
+                .iter()
+                .filter(|o| o.is_some())
+                .count();
+            let z1_count = z1
+                .iter()
+                .filter(|o| o.is_some())
+                .count();
+            let z2_count = z2
+                .iter()
+                .filter(|o| o.is_some())
+                .count();
             if x1_count.min(y1_count).min(z1_count) > x2_count.min(y2_count).min(z2_count) {
                 Ok((x1, y1, z1))
             } else {

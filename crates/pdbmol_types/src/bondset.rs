@@ -20,12 +20,17 @@ impl<T> BondSet<T> {
 impl<T: Ord + Copy> BondSet<T> {
     /// Iterate over all bonds as pairs with the lesser serial first.
     pub fn iter<'a>(&'a self) -> impl Iterator<Item = (T, T)> + 'a {
-        self.0.iter().filter(|(a, b)| a < b).copied()
+        self.0
+            .iter()
+            .filter(|(a, b)| a < b)
+            .copied()
     }
 
     /// Iterate over all bonds as pairs with the lesser serial first.
     pub fn into_iter(self) -> impl Iterator<Item = (T, T)> {
-        self.0.into_iter().filter(|(a, b)| a < b)
+        self.0
+            .into_iter()
+            .filter(|(a, b)| a < b)
     }
 
     pub fn insert(&mut self, a: T, b: T) {

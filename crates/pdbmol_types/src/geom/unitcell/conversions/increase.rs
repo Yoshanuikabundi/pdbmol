@@ -13,10 +13,7 @@ impl From<CubicUnitCell> for OrthogonalUnitCell {
 
 impl From<OrthogonalUnitCell> for RestrictedTriclinicUnitCell {
     fn from(value: OrthogonalUnitCell) -> Self {
-        Self {
-            size_parameters: [value.x, value.y, value.z],
-            tilt_parameters: [0.0, 0.0, 0.0],
-        }
+        Self { size_parameters: [value.x, value.y, value.z], tilt_parameters: [0.0, 0.0, 0.0] }
     }
 }
 

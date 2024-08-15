@@ -371,10 +371,7 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
             PdbRecord::Remark { remark_num, remark } => {
                 writeln!(f, "REMARK {remark_num: >3} {remark}")
             }
-            PdbRecord::SeqRes {
-                chain_id,
-                res_names,
-            } => {
+            PdbRecord::SeqRes { chain_id, res_names } => {
                 let num_res = res_names.len();
                 for (i, chunk) in res_names.chunks(13).enumerate() {
                     write!(f, "SEQRES {: >3} {chain_id} {num_res: >4} ", i + 1)?;
@@ -405,16 +402,7 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
                 write!(f, "{i_code2}                       ")?;
                 writeln!(f, "{symmetry_op1} {symmetry_op2} {length: >5.2}")
             }
-            PdbRecord::Cryst1 {
-                a,
-                b,
-                c,
-                alpha,
-                beta,
-                gamma,
-                space_group,
-                z,
-            } => {
+            PdbRecord::Cryst1 { a, b, c, alpha, beta, gamma, space_group, z } => {
                 write!(f, "CRYST1{a: >9.3}{b: >9.3}{c: >9.3}")?;
                 write!(f, "{alpha: >7.2}{beta: >7.2}{gamma: >7.2} ")?;
                 writeln!(f, "{space_group}{z: >4}")
@@ -422,13 +410,7 @@ impl<S: Display + Default + Clone> Display for PdbRecord<S> {
             PdbRecord::Model(i) => writeln!(f, "MODEL     {i: >4}"),
             PdbRecord::Atom(record) => writeln!(f, "ATOM  {record}"),
             PdbRecord::HetAtm(record) => writeln!(f, "HETATM{record}"),
-            PdbRecord::Ter {
-                serial,
-                res_name,
-                chain_id,
-                res_seq,
-                i_code,
-            } => {
+            PdbRecord::Ter { serial, res_name, chain_id, res_seq, i_code } => {
                 writeln!(
                     f,
                     "TER   {serial: >5}      {res_name: >3} {chain_id}{res_seq: >4}{i_code}"
@@ -464,18 +446,17 @@ impl From<PdbRecord<&str>> for PdbRecord<String> {
             PdbRecord::RevDat => PdbRecord::RevDat,
             PdbRecord::Sprsde => PdbRecord::Sprsde,
             PdbRecord::Jrnl => PdbRecord::Jrnl,
-            PdbRecord::Remark { remark_num, remark } => PdbRecord::Remark {
-                remark_num,
-                remark: remark.to_owned(),
-            },
+            PdbRecord::Remark { remark_num, remark } => {
+                PdbRecord::Remark { remark_num, remark: remark.to_owned() }
+            }
             PdbRecord::DbRef => PdbRecord::DbRef,
             PdbRecord::SeqAdv => PdbRecord::SeqAdv,
-            PdbRecord::SeqRes {
-                chain_id,
-                res_names,
-            } => PdbRecord::SeqRes {
+            PdbRecord::SeqRes { chain_id, res_names } => PdbRecord::SeqRes {
                 chain_id: chain_id.to_owned(),
-                res_names: res_names.into_iter().map(str::to_owned).collect(),
+                res_names: res_names
+                    .into_iter()
+                    .map(str::to_owned)
+                    .collect(),
             },
             PdbRecord::ModRes => PdbRecord::ModRes,
             PdbRecord::Het => PdbRecord::Het,
@@ -514,44 +495,27 @@ impl From<PdbRecord<&str>> for PdbRecord<String> {
             PdbRecord::Link => PdbRecord::Link,
             PdbRecord::CisPep => PdbRecord::CisPep,
             PdbRecord::Site => PdbRecord::Site,
-            PdbRecord::Cryst1 {
-                a,
-                b,
-                c,
-                alpha,
-                beta,
-                gamma,
-                space_group,
-                z,
-            } => PdbRecord::Cryst1 {
-                a,
-                b,
-                c,
-                alpha,
-                beta,
-                gamma,
-                space_group: space_group.to_owned(),
-                z,
-            },
+            PdbRecord::Cryst1 { a, b, c, alpha, beta, gamma, space_group, z } => {
+                PdbRecord::Cryst1 {
+                    a,
+                    b,
+                    c,
+                    alpha,
+                    beta,
+                    gamma,
+                    space_group: space_group.to_owned(),
+                    z,
+                }
+            }
             PdbRecord::OrigXN => PdbRecord::OrigXN,
             PdbRecord::ScaleN => PdbRecord::ScaleN,
             PdbRecord::MtrixN => PdbRecord::MtrixN,
             PdbRecord::Model(i) => PdbRecord::Model(i),
             PdbRecord::Atom(record) => PdbRecord::Atom(record.to_owned()),
             PdbRecord::AnisoU => PdbRecord::AnisoU,
-            PdbRecord::Ter {
-                serial,
-                res_name,
-                chain_id,
-                res_seq,
-                i_code,
-            } => PdbRecord::Ter {
-                serial,
-                res_name: res_name.to_owned(),
-                chain_id,
-                res_seq,
-                i_code,
-            },
+            PdbRecord::Ter { serial, res_name, chain_id, res_seq, i_code } => {
+                PdbRecord::Ter { serial, res_name: res_name.to_owned(), chain_id, res_seq, i_code }
+            }
             PdbRecord::HetAtm(record) => PdbRecord::HetAtm(record.to_owned()),
             PdbRecord::EndMdl => PdbRecord::EndMdl,
             PdbRecord::Conect { parent, bonds } => PdbRecord::Conect { parent, bonds },
@@ -596,10 +560,7 @@ pub struct PdbRecordParser<'t> {
 
 impl<'t> PdbRecordParser<'t> {
     pub fn from_str(s: &'t str) -> Self {
-        Self {
-            lines: s.lines().peekable(),
-            current_line: None,
-        }
+        Self { lines: s.lines().peekable(), current_line: None }
     }
 
     fn get_continuation(&mut self, prefix: &str) -> Option<&'t str> {
@@ -615,7 +576,10 @@ impl<'t> PdbRecordParser<'t> {
         if record_name.len() > 6 {
             panic!("record_name must be 6 characters or less")
         }
-        let continuation_line = self.lines.next().ok_or(PdbParseErr::UnexpectedEof)?;
+        let continuation_line = self
+            .lines
+            .next()
+            .ok_or(PdbParseErr::UnexpectedEof)?;
         if continuation_line.starts_with(record_name) {
             Ok(continuation_line)
         } else {
@@ -639,9 +603,11 @@ impl<'t> PdbRecordParser<'t> {
         line: &'t str,
         fields: impl IntoIterator<Item = RangeInclusive<usize>>,
     ) -> impl Iterator<Item = &'t str> {
-        fields
-            .into_iter()
-            .map_while(|range| line.get(range).map(str::trim).take_if(|s| !s.is_empty()))
+        fields.into_iter().map_while(|range| {
+            line.get(range)
+                .map(str::trim)
+                .take_if(|s| !s.is_empty())
+        })
     }
 
     fn split_current_line(
@@ -668,7 +634,11 @@ impl<'t> PdbRecordParser<'t> {
     }
 
     fn try_char_field(&self, index: usize) -> Result<char, PdbParseErr> {
-        Ok(self.try_field(index..=index)?.chars().next().unwrap())
+        Ok(self
+            .try_field(index..=index)?
+            .chars()
+            .next()
+            .unwrap())
     }
 
     fn parse_seqres(&mut self) -> Result<PdbRecord<&'t str>> {
@@ -709,10 +679,7 @@ impl<'t> PdbRecordParser<'t> {
                 found: res_names.len(),
             })
         } else {
-            Ok(PdbRecord::SeqRes {
-                chain_id,
-                res_names,
-            })
+            Ok(PdbRecord::SeqRes { chain_id, res_names })
         }
     }
 

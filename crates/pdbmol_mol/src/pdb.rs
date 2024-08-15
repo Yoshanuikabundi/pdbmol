@@ -35,10 +35,7 @@ pub struct PdbAtom<S> {
 
 impl<S> From<AtomRecord<S>> for PdbAtom<S> {
     fn from(value: AtomRecord<S>) -> Self {
-        Self {
-            record: value,
-            terminated: None,
-        }
+        Self { record: value, terminated: None }
     }
 }
 
@@ -137,27 +134,19 @@ impl<S: Eq> PdbTopology<S> {
             match record? {
                 PdbRecord::Atom(record) | PdbRecord::HetAtm(record) => {
                     let serial = record.serial;
-                    if atoms.insert(serial, record.into()).is_some() {
+                    if atoms
+                        .insert(serial, record.into())
+                        .is_some()
+                    {
                         return Err(MolFromPdbErr::DuplicateAtomSerial(serial));
                     }
                 }
-                PdbRecord::Conect {
-                    parent: serial1,
-                    bonds: serial2s,
-                } => {
+                PdbRecord::Conect { parent: serial1, bonds: serial2s } => {
                     for serial2 in serial2s {
                         bonds.insert(serial1, serial2);
                     }
                 }
-                PdbRecord::Cryst1 {
-                    a,
-                    b,
-                    c,
-                    alpha,
-                    beta,
-                    gamma,
-                    ..
-                } => {
+                PdbRecord::Cryst1 { a, b, c, alpha, beta, gamma, .. } => {
                     if unit_cell.is_some() {
                         return Err(MolFromPdbErr::DuplicateUnitCellRecords);
                     }
@@ -166,13 +155,7 @@ impl<S: Eq> PdbTopology<S> {
                     )
                     .ok()
                 }
-                PdbRecord::Ter {
-                    serial,
-                    res_name,
-                    chain_id,
-                    res_seq,
-                    i_code,
-                } => {
+                PdbRecord::Ter { serial, res_name, chain_id, res_seq, i_code } => {
                     let mut no_terminated_residue = true;
                     for atom in atoms.values_mut().rev() {
                         if (atom.record.res_name == res_name)
@@ -194,10 +177,6 @@ impl<S: Eq> PdbTopology<S> {
             }
         }
 
-        Ok(Self {
-            atoms,
-            bonds,
-            unit_cell,
-        })
+        Ok(Self { atoms, bonds, unit_cell })
     }
 }

@@ -62,10 +62,8 @@ pub struct Numeric {
 impl Numeric {
     pub fn parser(input: &mut &str) -> PResult<Self> {
         alt((
-            (number, '(', unsigned_integer, ')').map(|(value, _, esd, _)| Self {
-                value,
-                esd: Some(esd),
-            }),
+            (number, '(', unsigned_integer, ')')
+                .map(|(value, _, esd, _)| Self { value, esd: Some(esd) }),
             number.map(|value| Self { value, esd: None }),
         ))
         .parse_next(input)
@@ -181,66 +179,42 @@ mod tests {
     fn test_numeric() {
         assert_eq!(
             Numeric::parser.parse("5e3"),
-            Ok(Numeric {
-                value: Number::Float(5e3),
-                esd: None
-            })
+            Ok(Numeric { value: Number::Float(5e3), esd: None })
         );
 
         assert_eq!(
             Numeric::parser.parse("5"),
-            Ok(Numeric {
-                value: Number::Int(5),
-                esd: None
-            })
+            Ok(Numeric { value: Number::Int(5), esd: None })
         );
 
         assert_eq!(
             Numeric::parser.parse("5."),
-            Ok(Numeric {
-                value: Number::Float(5.),
-                esd: None
-            })
+            Ok(Numeric { value: Number::Float(5.), esd: None })
         );
 
         assert_eq!(
             Numeric::parser.parse("-5"),
-            Ok(Numeric {
-                value: Number::Int(-5),
-                esd: None
-            })
+            Ok(Numeric { value: Number::Int(-5), esd: None })
         );
 
         assert_eq!(
             Numeric::parser.parse("+354"),
-            Ok(Numeric {
-                value: Number::Int(354),
-                esd: None
-            })
+            Ok(Numeric { value: Number::Int(354), esd: None })
         );
 
         assert_eq!(
             Numeric::parser.parse("+342.63547e-23"),
-            Ok(Numeric {
-                value: Number::Float(342.63547e-23),
-                esd: None
-            })
+            Ok(Numeric { value: Number::Float(342.63547e-23), esd: None })
         );
 
         assert_eq!(
             Numeric::parser.parse("7(2)"),
-            Ok(Numeric {
-                value: Number::Int(7),
-                esd: Some(2),
-            })
+            Ok(Numeric { value: Number::Int(7), esd: Some(2) })
         );
 
         assert_eq!(
             Numeric::parser.parse("+342.63547e-23(54)"),
-            Ok(Numeric {
-                value: Number::Float(342.63547e-23),
-                esd: Some(54),
-            })
+            Ok(Numeric { value: Number::Float(342.63547e-23), esd: Some(54) })
         );
 
         assert!(Numeric::parser.parse("7(2.)").is_err());

@@ -30,9 +30,10 @@ pub fn parse(s: &str) -> Result<ParsedCif, ParseError<&str, ContextError>> {
                     .flat_map(
                         |datablockitem| -> Box<dyn Iterator<Item = (&str, Vec<&str>)>> {
                             match datablockitem {
-                                DataBlockItem::DataItems(map) => {
-                                    Box::new(map.into_iter().map(|(key, value)| (key, vec![value])))
-                                }
+                                DataBlockItem::DataItems(map) => Box::new(
+                                    map.into_iter()
+                                        .map(|(key, value)| (key, vec![value])),
+                                ),
                                 DataBlockItem::Table(map) => Box::new(map.into_iter()),
                                 DataBlockItem::SaveFrame(_) => unimplemented!(),
                             }
