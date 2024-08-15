@@ -1,136 +1,12 @@
-//! # Further reading
-//!
-//! - <https://docs.lammps.org/Howto_triclinic.html#crystallographic-general-triclinic-representation-of-a-simulation-box>
-//! - <https://doi.org/10.1002/(SICI)1096-987X(19971130)18:15%3C1930::AID-JCC8%3E3.0.CO;2-P>
-//! - <http://docs.openmm.org/latest/userguide/theory/05_other_features.html#periodic-boundary-conditions>
-//! - <https://manual.gromacs.org/2024.2/reference-manual/algorithms/periodic-boundary-conditions.html>
-
-use std::error;
-
-use itertools::Either;
-use thiserror::Error;
-
 use super::representations::*;
 use crate::geom::math_utils::{cross, dot, mul, norm, sub, unit};
 
-// Infallible conversions that preserve information exactly
-//
-// These are conversions that represent the same unit cell with more parameters.
-
-impl From<CubicUnitCell> for OrthogonalUnitCell {
-    fn from(value: CubicUnitCell) -> Self {
-        let CubicUnitCell(l) = value;
-        Self { x: l, y: l, z: l }
-    }
-}
-
-impl From<OrthogonalUnitCell> for RestrictedTriclinicUnitCell {
-    fn from(value: OrthogonalUnitCell) -> Self {
-        Self {
-            size_parameters: [value.x, value.y, value.z],
-            tilt_parameters: [0.0, 0.0, 0.0],
-        }
-    }
-}
-
-impl From<OrthogonalUnitCell> for CrystallographicUnitCell {
-    fn from(value: OrthogonalUnitCell) -> Self {
-        let OrthogonalUnitCell { x: a, y: b, z: c } = value;
-        Self {
-            a,
-            b,
-            c,
-            alpha: std::f32::consts::FRAC_PI_2,
-            beta: std::f32::consts::FRAC_PI_2,
-            gamma: std::f32::consts::FRAC_PI_2,
-        }
-    }
-}
-
-impl From<RestrictedTriclinicUnitCell> for TriclinicUnitCell {
-    fn from(value: RestrictedTriclinicUnitCell) -> Self {
-        let RestrictedTriclinicUnitCell {
-            size_parameters: [lx, ly, lz],
-            tilt_parameters: [xy, xz, yz],
-        } = value;
-
-        Self([[lx, 0.0, 0.0], [xy, ly, 0.0], [xz, yz, lz]])
-    }
-}
-
-// Fallible conversions that preserve information exactly
-//
-// These are conversions that represent the same unit cell with fewer
-// parameters.
-
-#[derive(Error, Debug)]
-#[error(
-    "orientation is not reduced: A not aligned to x axis, B not in xy plane, or By or Cz negative"
-)]
-pub struct NonReducedOrientationErr;
-
-impl TryFrom<TriclinicUnitCell> for RestrictedTriclinicUnitCell {
-    type Error = NonReducedOrientationErr;
-
-    /// This conversion method returns an error if the unit cell is not in the
-    /// restricted orientation. No allowance is made for nonzero floating point
-    /// values; even an orientation machine epsilon away from the restricted
-    /// orientation will return an error. For a method that discards the
-    /// orientation, see [`RestrictedTriclinicUnitCell::from()`]
-    fn try_from(value: TriclinicUnitCell) -> Result<Self, Self::Error> {
-        if let TriclinicUnitCell([[lx, 0.0, 0.0], [xy, ly, 0.0], [xz, yz, lz]]) = value {
-            Ok(Self {
-                size_parameters: [lx, ly, lz],
-                tilt_parameters: [xy, xz, yz],
-            })
-        } else {
-            Err(NonReducedOrientationErr)
-        }
-    }
-}
-
-#[derive(Error, Debug)]
-#[error("unit cell is not orthogonal: all vectors must be perpendicular")]
-pub struct NonOrthogonalUnitCellError;
-
-impl TryFrom<RestrictedTriclinicUnitCell> for OrthogonalUnitCell {
-    type Error = NonOrthogonalUnitCellError;
-
-    /// This conversion method returns an error if the unit cell is not already
-    /// orthogonal. No allowance is made for nonzero floating point values; even
-    /// a tilt machine epsilon away from orthogonal will return an error.
-    fn try_from(value: RestrictedTriclinicUnitCell) -> Result<Self, Self::Error> {
-        if let RestrictedTriclinicUnitCell {
-            size_parameters: [x, y, z],
-            tilt_parameters: [0.0, 0.0, 0.0],
-        } = value
-        {
-            Ok(Self { x, y, z })
-        } else {
-            Err(NonOrthogonalUnitCellError)
-        }
-    }
-}
-
-#[derive(Error, Debug)]
-#[error("unit cell is not regular: all cell distances must be identical")]
-pub struct NonRegularUnitCellError;
-
-impl TryFrom<OrthogonalUnitCell> for CubicUnitCell {
-    type Error = NonRegularUnitCellError;
-
-    /// This conversion method returns an error if the unit cell is not already
-    /// cubic. No allowance is made for nonzero floating point values; even
-    /// a stretch machine epsilon away from cubic will return an error.
-    fn try_from(value: OrthogonalUnitCell) -> Result<Self, Self::Error> {
-        let OrthogonalUnitCell { x, y, z } = value;
-        if (x == y) & (x == z) {
-            Ok(Self(x))
-        } else {
-            Err(NonRegularUnitCellError)
-        }
-    }
-}
+/// Conversions from and to external types
+mod external;
+/// Fallible conversions that represent the same unit cell in fewer parameters.
+mod fallible_decrease;
+/// Infallible conversions that represent the same unit cell with more parameters.
+mod increase;
 
 // Infallible conversions that preserve information down to machine precision
 //
@@ -197,10 +73,12 @@ impl TriclinicUnitCell {
     ///
     /// The resulting unit cell is oriented such that A is aligned to the
     /// x-axis, B is in the x-y plane, and By and Cz are positive. This is the
-    /// conventional orientation used by GROMACS, LAMMPS and OpenMM. This method
-    /// additionally reduces the cell vectors' tilts without changing the
-    /// lattice so that they each point to the nearest periodic image; see
-    /// [`RestrictedTriclinicUnitCell::reduce_tilt()`].
+    /// conventional orientation used by GROMACS, LAMMPS and OpenMM.
+    ///
+    /// This method does not reduce the unit cell's tilt, and so the generated
+    /// box may not be compatible with MD engines. To reduce the tilt and attain
+    /// the convential MD reduced vector representation, follow a call to this
+    /// function with a call to [`RestrictedTriclinicUnitCell::reduce_tilt()`].
     ///
     /// This conversion method discards the orientation of the unit cell. For a
     /// method that returns an error if orientation would be discarded, see
@@ -223,7 +101,6 @@ impl TriclinicUnitCell {
             size_parameters: [a_x, b_y, c_z],
             tilt_parameters: [b_x, c_x, c_y],
         }
-        .reduce_tilt()
     }
 }
 
@@ -319,122 +196,5 @@ impl RestrictedTriclinicUnitCell {
             y: v[1],
             z: w[2],
         }
-    }
-
-    /// Reduce the unit cell to a cube with the same periodic image distance.
-    ///
-    /// Note that the new representation will have a much larger volume. The
-    /// periodic image distance is the shortest distance between a point in
-    /// one cell and the same point in another cell. Since a freely rotating
-    /// solute sweeps out a sphere, this is the most efficient way to convert
-    /// a triclinic box to a cubic box without comprimising the buffer distance.
-    pub fn to_cube(&self) -> CubicUnitCell {
-        let RestrictedTriclinicUnitCell {
-            size_parameters: [a_x, b_y, c_z],
-            tilt_parameters: [b_x, c_x, c_y],
-        } = self.reduce_tilt();
-
-        let a = a_x;
-        let b = f32::sqrt(b_x.powi(2) + b_y.powi(2));
-        let c = f32::sqrt(c_x.powi(2) + c_y.powi(2) + c_z.powi(2));
-
-        CubicUnitCell(a.min(b).min(c))
-    }
-}
-
-// Infallible conversions composed of the above
-
-impl From<CubicUnitCell> for RestrictedTriclinicUnitCell {
-    fn from(value: CubicUnitCell) -> Self {
-        OrthogonalUnitCell::from(value).into()
-    }
-}
-
-impl From<CubicUnitCell> for CrystallographicUnitCell {
-    fn from(value: CubicUnitCell) -> Self {
-        RestrictedTriclinicUnitCell::from(value).into()
-    }
-}
-
-impl From<CubicUnitCell> for TriclinicUnitCell {
-    fn from(value: CubicUnitCell) -> Self {
-        RestrictedTriclinicUnitCell::from(value).into()
-    }
-}
-
-impl From<OrthogonalUnitCell> for TriclinicUnitCell {
-    fn from(value: OrthogonalUnitCell) -> Self {
-        RestrictedTriclinicUnitCell::from(value).into()
-    }
-}
-
-impl From<CrystallographicUnitCell> for TriclinicUnitCell {
-    fn from(value: CrystallographicUnitCell) -> Self {
-        RestrictedTriclinicUnitCell::from(value).into()
-    }
-}
-
-// Fallible conversions composed of the above
-
-impl TryFrom<TriclinicUnitCell> for CrystallographicUnitCell {
-    type Error = NonReducedOrientationErr;
-
-    fn try_from(value: TriclinicUnitCell) -> Result<Self, Self::Error> {
-        Ok(RestrictedTriclinicUnitCell::try_from(value)?.into())
-    }
-}
-
-impl TryFrom<TriclinicUnitCell> for OrthogonalUnitCell {
-    type Error = Either<NonReducedOrientationErr, NonOrthogonalUnitCellError>;
-
-    fn try_from(value: TriclinicUnitCell) -> Result<Self, Self::Error> {
-        RestrictedTriclinicUnitCell::try_from(value)
-            .map_err(Either::Left)?
-            .try_into()
-            .map_err(Either::Right)
-    }
-}
-
-impl TryFrom<TriclinicUnitCell> for CubicUnitCell {
-    type Error = Either<
-        Either<NonReducedOrientationErr, NonOrthogonalUnitCellError>,
-        NonRegularUnitCellError,
-    >;
-
-    fn try_from(value: TriclinicUnitCell) -> Result<Self, Self::Error> {
-        OrthogonalUnitCell::try_from(value)
-            .map_err(Either::Left)?
-            .try_into()
-            .map_err(Either::Right)
-    }
-}
-
-impl TryFrom<RestrictedTriclinicUnitCell> for CubicUnitCell {
-    type Error = Either<NonOrthogonalUnitCellError, NonRegularUnitCellError>;
-
-    fn try_from(value: RestrictedTriclinicUnitCell) -> Result<Self, Self::Error> {
-        OrthogonalUnitCell::try_from(value)
-            .map_err(Either::Left)?
-            .try_into()
-            .map_err(Either::Right)
-    }
-}
-
-impl TryFrom<CrystallographicUnitCell> for OrthogonalUnitCell {
-    type Error = NonOrthogonalUnitCellError;
-
-    fn try_from(value: CrystallographicUnitCell) -> Result<Self, Self::Error> {
-        RestrictedTriclinicUnitCell::from(value).try_into()
-    }
-}
-
-impl TryFrom<CrystallographicUnitCell> for CubicUnitCell {
-    type Error = Either<NonOrthogonalUnitCellError, NonRegularUnitCellError>;
-
-    fn try_from(value: CrystallographicUnitCell) -> Result<Self, Self::Error> {
-        OrthogonalUnitCell::try_from(value)
-            .map_err(Either::Left)?
-            .try_into()
-            .map_err(Either::Right)
     }
 }
