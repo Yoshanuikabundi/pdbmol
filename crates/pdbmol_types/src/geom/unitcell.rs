@@ -23,7 +23,10 @@ pub enum UnitCellShape {
 }
 
 impl UnitCellShape {
-    fn vectors_with_image_distance(&self, d: f32) -> TriclinicUnitCell {
+    fn vectors_with_image_distance(
+        &self,
+        d: f32,
+    ) -> TriclinicUnitCell {
         TriclinicUnitCell(match self {
             Self::RhombicDodecahedron => [
                 [d, 0., 0.],
@@ -79,7 +82,11 @@ pub trait UnitCell: Into<TriclinicUnitCell> + TryFrom<TriclinicUnitCell> + Clone
         Self::try_from(TriclinicUnitCell(vectors))
     }
 
-    fn from_lengths(x: f32, y: f32, z: f32) -> Result<Self, Self::Error> {
+    fn from_lengths(
+        x: f32,
+        y: f32,
+        z: f32,
+    ) -> Result<Self, Self::Error> {
         Self::try_from(OrthogonalUnitCell { x, y, z }.into())
     }
 
@@ -87,7 +94,10 @@ pub trait UnitCell: Into<TriclinicUnitCell> + TryFrom<TriclinicUnitCell> + Clone
         Self::try_from(CubicUnitCell(l).into())
     }
 
-    fn from_image_distance_and_shape(d: f32, shape: UnitCellShape) -> Result<Self, Self::Error> {
+    fn from_image_distance_and_shape(
+        d: f32,
+        shape: UnitCellShape,
+    ) -> Result<Self, Self::Error> {
         shape
             .vectors_with_image_distance(d)
             .try_into()
@@ -131,7 +141,10 @@ pub trait UnitCell: Into<TriclinicUnitCell> + TryFrom<TriclinicUnitCell> + Clone
         .is_err()
     }
 
-    fn scale(&self, scale: f32) -> Self {
+    fn scale(
+        &self,
+        scale: f32,
+    ) -> Self {
         let TriclinicUnitCell([a, b, c]) = self.clone().into();
         let scaled = Self::try_from(TriclinicUnitCell([
             mul(scale, a),
@@ -145,7 +158,11 @@ pub trait UnitCell: Into<TriclinicUnitCell> + TryFrom<TriclinicUnitCell> + Clone
         }
     }
 
-    fn tile_points(&self, points: &[[f32; 3]], iterations: [usize; 3]) -> Vec<[f32; 3]> {
+    fn tile_points(
+        &self,
+        points: &[[f32; 3]],
+        iterations: [usize; 3],
+    ) -> Vec<[f32; 3]> {
         let cell_vectors = self.to_vectors();
         let mut tiled =
             Vec::with_capacity(points.len() * iterations[0] * iterations[1] * iterations[2]);

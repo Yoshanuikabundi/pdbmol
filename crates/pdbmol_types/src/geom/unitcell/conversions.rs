@@ -127,7 +127,10 @@ impl RestrictedTriclinicUnitCell {
             tilt_parameters: [b_x, c_x, c_y],
         } = self;
 
-        fn reduce_tilt(tilt: f32, size: f32) -> f32 {
+        fn reduce_tilt(
+            tilt: f32,
+            size: f32,
+        ) -> f32 {
             let tilt = tilt % size;
             if tilt <= size / 2. {
                 tilt

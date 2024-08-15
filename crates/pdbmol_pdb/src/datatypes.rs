@@ -27,7 +27,10 @@ pub struct AtomRecord<S = String> {
 }
 
 impl<S: Display> Display for AtomRecord<S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         let AtomRecord {
             serial,
             name,
@@ -333,7 +336,10 @@ pub enum PdbRecord<S = String> {
 }
 
 impl<S: Display + Default + Clone> Display for PdbRecord<S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         match self {
             PdbRecord::Header
             | PdbRecord::Obslte
@@ -563,7 +569,10 @@ impl<'t> PdbRecordParser<'t> {
         Self { lines: s.lines().peekable(), current_line: None }
     }
 
-    fn get_continuation(&mut self, prefix: &str) -> Option<&'t str> {
+    fn get_continuation(
+        &mut self,
+        prefix: &str,
+    ) -> Option<&'t str> {
         let &continuation_line = self.lines.peek()?;
         if continuation_line.starts_with(prefix) {
             self.lines.next()
@@ -572,7 +581,10 @@ impl<'t> PdbRecordParser<'t> {
         }
     }
 
-    fn try_continuation(&mut self, record_name: &'static str) -> Result<&'t str> {
+    fn try_continuation(
+        &mut self,
+        record_name: &'static str,
+    ) -> Result<&'t str> {
         if record_name.len() > 6 {
             panic!("record_name must be 6 characters or less")
         }
@@ -618,13 +630,19 @@ impl<'t> PdbRecordParser<'t> {
     }
 
     /// Get a field from the current line if the field exists
-    fn try_field(&self, range: RangeInclusive<usize>) -> Result<&'t str> {
+    fn try_field(
+        &self,
+        range: RangeInclusive<usize>,
+    ) -> Result<&'t str> {
         let line = self.get_current_line();
         line.get(range)
             .ok_or(PdbParseErr::LineTooShort(line.to_owned()))
     }
 
-    fn try_parsed_field<F>(&self, range: RangeInclusive<usize>) -> Result<F, PdbParseErr>
+    fn try_parsed_field<F>(
+        &self,
+        range: RangeInclusive<usize>,
+    ) -> Result<F, PdbParseErr>
     where
         F: FromStr,
         F::Err: Into<PdbParseErr>,
@@ -633,7 +651,10 @@ impl<'t> PdbRecordParser<'t> {
         Ok(self.try_field(range)?.trim().parse()?)
     }
 
-    fn try_char_field(&self, index: usize) -> Result<char, PdbParseErr> {
+    fn try_char_field(
+        &self,
+        index: usize,
+    ) -> Result<char, PdbParseErr> {
         Ok(self
             .try_field(index..=index)?
             .chars()

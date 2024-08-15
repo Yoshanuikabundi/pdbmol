@@ -2,7 +2,7 @@ pub mod datatypes;
 use datatypes::{PdbParseErr, PdbRecord, PdbRecordParser};
 
 pub fn load(
-    path: impl AsRef<std::path::Path>,
+    path: impl AsRef<std::path::Path>
 ) -> std::io::Result<Vec<Result<PdbRecord, PdbParseErr>>> {
     let contents = std::fs::read_to_string(path)?;
     Ok(parse(&contents))

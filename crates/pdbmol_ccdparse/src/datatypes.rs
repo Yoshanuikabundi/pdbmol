@@ -149,7 +149,10 @@ pub struct Atoms<'s> {
 }
 
 impl<'s> Debug for Atoms<'s> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         if f.alternate() {
             writeln!(f, "Atoms {{")?;
             writeln!(f, "    atom_id: {:?},", self.atom_id)?;
@@ -256,7 +259,7 @@ fn get_coords_with_key(
 /// `"chem_comp_atom.pdbx_model_Cartn_{xyz}_ideal"` depending on which provides
 /// the "better" set of values.
 fn get_xyz(
-    map: &HashMap<&str, Vec<&str>>,
+    map: &HashMap<&str, Vec<&str>>
 ) -> Result<(Vec<Option<f32>>, Vec<Option<f32>>, Vec<Option<f32>>), String> {
     let x1 = get_coords_with_key(map, "chem_comp_atom.model_Cartn_x");
     let x2 = get_coords_with_key(map, "chem_comp_atom.pdbx_model_Cartn_x_ideal");
@@ -350,7 +353,10 @@ pub struct Bonds<'s> {
 }
 
 impl<'s> Debug for Bonds<'s> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
         if f.alternate() {
             writeln!(f, "Bonds {{")?;
             writeln!(f, "    atom1: {:?},", self.atom1)?;

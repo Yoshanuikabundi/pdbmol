@@ -124,7 +124,7 @@ impl<S: Eq + Clone> PdbTopology<S> {
 
 impl<S: Eq> PdbTopology<S> {
     pub fn from_pdb_data(
-        pdb: impl IntoIterator<Item = Result<PdbRecord<S>, PdbParseErr>>,
+        pdb: impl IntoIterator<Item = Result<PdbRecord<S>, PdbParseErr>>
     ) -> Result<Self, MolFromPdbErr> {
         let mut atoms: BTreeMap<i32, PdbAtom<S>> = BTreeMap::new();
         let mut bonds = BondSet::new();

@@ -8,7 +8,11 @@ use crate::bondset::BondSet;
 use super::{CubicUnitCell, OrthogonalUnitCell, UnitCell};
 
 impl OrthogonalUnitCell {
-    pub fn tile_past(&self, target: impl UnitCell, points: &[[f32; 3]]) -> Vec<[f32; 3]> {
+    pub fn tile_past(
+        &self,
+        target: impl UnitCell,
+        points: &[[f32; 3]],
+    ) -> Vec<[f32; 3]> {
         if target.has_orientation() {
             todo!("get rotation from triclinic -> restricted triclinic");
         };
@@ -59,7 +63,11 @@ impl OrthogonalUnitCell {
 }
 
 impl CubicUnitCell {
-    pub fn tile_past(&self, points: &[[f32; 3]], target: impl UnitCell) -> Vec<[f32; 3]> {
+    pub fn tile_past(
+        &self,
+        points: &[[f32; 3]],
+        target: impl UnitCell,
+    ) -> Vec<[f32; 3]> {
         OrthogonalUnitCell::from(*self).tile_past(target, points)
     }
 

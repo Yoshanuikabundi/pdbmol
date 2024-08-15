@@ -33,7 +33,11 @@ impl<T: Ord + Copy> BondSet<T> {
             .filter(|(a, b)| a < b)
     }
 
-    pub fn insert(&mut self, a: T, b: T) {
+    pub fn insert(
+        &mut self,
+        a: T,
+        b: T,
+    ) {
         self.0.insert((a, b));
         self.0.insert((b, a));
     }
