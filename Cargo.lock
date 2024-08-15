@@ -55,6 +55,7 @@ version = "0.1.0"
 dependencies = [
  "pdbmol_ccdparse",
  "pdbmol_cif",
+ "pdbmol_types",
 ]
 
 [[package]]
@@ -77,6 +78,7 @@ dependencies = [
 name = "pdbmol_mol"
 version = "0.1.0"
 dependencies = [
+ "itertools",
  "pdbmol_ccdparse",
  "pdbmol_pdb",
  "pdbmol_types",

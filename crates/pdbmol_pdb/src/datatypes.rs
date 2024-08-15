@@ -561,7 +561,7 @@ impl From<PdbRecord<&str>> for PdbRecord<String> {
     }
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
 pub enum PdbParseErr {
     #[error("record type {0} is unknown")]

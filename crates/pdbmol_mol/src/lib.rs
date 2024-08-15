@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 
-use pdbmol_ccdparse::datatypes::Residue;
-use pdbmol_pdb::datatypes::{AtomRecord, PdbParseErr, PdbRecord};
 use pdbmol_types::{stereo::AtomStereo, stereo::BondStereo, Element};
 
-mod pdb;
+pub mod pdb;
 
-enum MetadataValue {
+pub enum MetadataValue {
     String(String),
     Float(f32),
     Int(i32),
@@ -44,7 +42,7 @@ impl From<i32> for MetadataValue {
 
 type Metadata = HashMap<&'static str, MetadataValue>;
 
-struct Atom {
+pub struct Atom {
     element: Element,
     formal_charge: i8,
     metadata: Metadata,
@@ -52,7 +50,7 @@ struct Atom {
     aromatic: Option<bool>,
 }
 
-struct Bond {
+pub struct Bond {
     atom1: usize,
     atom2: usize,
     bond_order: u8,
@@ -60,7 +58,7 @@ struct Bond {
     aromatic: Option<bool>,
 }
 
-struct Molecule {
+pub struct Molecule {
     atoms: Vec<Atom>,
     bonds: Vec<Bond>,
     metadata: Metadata,

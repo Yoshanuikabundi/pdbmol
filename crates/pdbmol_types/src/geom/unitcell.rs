@@ -13,7 +13,7 @@ mod tilings;
 
 pub use representations::*;
 
-use crate::geom::math_utils::{add, mul, norm, sub};
+use crate::geom::math_utils::{add, mul};
 
 pub enum UnitCellShape {
     RhombicDodecahedron,
@@ -167,14 +167,6 @@ pub trait UnitCell: Into<TriclinicUnitCell> + TryFrom<TriclinicUnitCell> + Clone
         }
 
         tiled
-    }
-
-    /// The shortest distance between the same point in any two images of the cell.
-    fn periodic_image_distance(&self) -> f32 {
-        // Get positive unit cell vectors (orientation is irrelevant)
-        let [a, b, c] = self.to_md_vectors();
-        //
-        [a, b, c, sub(a, b), sub(a, c), sub(b, c)].map(norm).min()
     }
 }
 

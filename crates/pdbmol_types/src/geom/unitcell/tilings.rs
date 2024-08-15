@@ -1,3 +1,10 @@
+#![cfg_attr(
+    debug_assertions,
+    allow(dead_code, unused_variables, unreachable_code,)
+)]
+
+use crate::bondset::BondSet;
+
 use super::{CubicUnitCell, OrthogonalUnitCell, UnitCell};
 
 impl OrthogonalUnitCell {
@@ -31,15 +38,15 @@ impl OrthogonalUnitCell {
         &self,
         target: impl UnitCell,
         points: &[[f32; 3]],
-        bonds: Vec<(usize, usize)>,
+        _bonds: BondSet<usize>,
     ) -> Vec<[f32; 3]> {
         if target.has_orientation() {
             todo!("get rotation from triclinic -> restricted triclinic");
         };
 
         let brick = target.to_brick();
-        let tiled = self.tile_past(brick, points);
-        let bonds = todo!("extend bonds according to tiling");
+        let _tiled = self.tile_past(brick, points);
+        let _bonds = todo!("extend bonds according to tiling");
 
         todo!("trim points outside brick, and points bonded to them");
 
@@ -47,7 +54,7 @@ impl OrthogonalUnitCell {
             todo!("rotate the tiled points by inverse of orientation");
         };
 
-        tiled
+        _tiled
     }
 }
 
@@ -59,7 +66,7 @@ impl CubicUnitCell {
     pub fn tile_to(
         &self,
         points: &[[f32; 3]],
-        bonds: Vec<(usize, usize)>,
+        bonds: BondSet<usize>,
         target: impl UnitCell,
     ) -> Vec<[f32; 3]> {
         OrthogonalUnitCell::from(*self).tile_to(target, points, bonds)

@@ -22,3 +22,6 @@ unsafe_code = "forbid"
 [workspace.lints.clippy]
 type_complexity = "allow"
 should_implement_trait = "allow"
+diverging_sub_expression = "allow"
+needless_lifetimes = "allow"
+let_unit_value = "allow"

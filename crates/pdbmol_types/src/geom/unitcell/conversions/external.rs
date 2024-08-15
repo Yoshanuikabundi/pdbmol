@@ -1,5 +1,3 @@
-//! Conversions from and to external types
-
 use super::*;
 
 impl From<[[f32; 3]; 3]> for TriclinicUnitCell {
@@ -19,6 +17,7 @@ impl From<TriclinicUnitCell> for [[f32; 3]; 3] {
 }
 
 mod composite {
+    use super::*;
 
     impl TryFrom<[[f32; 3]; 3]> for RestrictedTriclinicUnitCell {
         type Error = <TriclinicUnitCell as TryInto<RestrictedTriclinicUnitCell>>::Error;

@@ -3,7 +3,10 @@
 use std::{collections::HashMap, fmt::Debug, str::FromStr};
 
 use pdbmol_cif::ParsedDataBlock;
-use pdbmol_types::{stereo::AtomStereo, stereo::BondStereo};
+use pdbmol_types::{
+    stereo::{AtomStereo, BondStereo},
+    ResidueDefinition,
+};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum LinkingType {
@@ -77,7 +80,7 @@ impl FromStr for LinkingType {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Residue<'s> {
+pub struct CcdResidue<'s> {
     /// Residue ID code
     ///
     /// `_chem_comp.id` in CCD
@@ -97,7 +100,14 @@ pub struct Residue<'s> {
     pub bonds: Bonds<'s>,
 }
 
-impl<'s> TryFrom<&ParsedDataBlock<'s>> for Residue<'s> {
+impl<'s> From<CcdResidue<'s>> for ResidueDefinition<&'s str> {
+    fn from(value: CcdResidue<'s>) -> Self {
+        let CcdResidue { id, .. } = value;
+        Self { id }
+    }
+}
+
+impl<'s> TryFrom<&ParsedDataBlock<'s>> for CcdResidue<'s> {
     type Error = String;
 
     fn try_from(value: &ParsedDataBlock<'s>) -> Result<Self, Self::Error> {
