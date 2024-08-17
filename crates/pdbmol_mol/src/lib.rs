@@ -83,14 +83,14 @@ impl Molecule {
 
     fn extend_with(
         &mut self,
-        residue: &ResidueDefinition<'static>,
+        residue: &ResidueDefinition,
     ) -> Self {
         todo!()
     }
 }
 
-impl From<ResidueDefinition<'static>> for Molecule {
-    fn from(value: ResidueDefinition<'static>) -> Self {
+impl From<ResidueDefinition<'_>> for Molecule {
+    fn from(value: ResidueDefinition) -> Self {
         Self::new().extend_with(&value)
     }
 }

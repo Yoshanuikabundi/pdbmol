@@ -1,14 +1,10 @@
-use std::{
-    collections::{BTreeMap, HashMap},
-    hash::Hash,
-    ops::RangeInclusive,
-};
+use std::collections::{BTreeMap, HashMap};
 
 use itertools::Itertools;
-use pdbmol_pdb::datatypes::{AtomRecord, PdbParseErr, PdbRecord};
+use pdbmol_pdb::{AtomRecord, PdbParseErr, PdbRecord};
 use pdbmol_types::{
     geom::lattice::{representations::CrystallographicUnitCell, UnitCell},
-    ResidueDefinition,
+    Element, ResidueDefinition,
 };
 use thiserror::Error;
 
@@ -49,25 +45,30 @@ pub struct PdbTopology<'s> {
 
 use super::Molecule;
 
-impl<S: Eq + Clone + Hash> PdbTopology<S> {
+impl<'s> PdbTopology<'s> {
     /// Construct a `Molecule` for each residue in the PDB file.
     ///
     /// The constructed Molecule may include atoms that are not present in the
     /// PDB file.
     fn construct_expected_molecules(
         &self,
-        residue_database: HashMap<S, ResidueDefinition<S>>,
+        residue_database: HashMap<&'s str, ResidueDefinition<'s>>,
     ) -> Result<Vec<Molecule>, MolFromPdbErr> {
-        let mut molecules: BTreeMap<RangeInclusive<i32>, Molecule> = BTreeMap::new();
         let mut this_chain_id = ' ';
-        let mut this_molecule: Molecule = Molecule::new();
+        let mut molecules: Vec<Molecule> = vec![Molecule::new()];
 
-        for (res_name, res_seq, i_code, chain_id, terminated) in self.residues() {
+        fn start_new_molecule(molecules: &mut Vec<Molecule>) -> &mut Molecule {
+            if molecules.is_empty() | !molecules.last().unwrap().is_empty() {
+                molecules.push(Molecule::new());
+            }
+            molecules.last_mut().unwrap()
+        }
+
+        let mut this_molecule: &mut Molecule = start_new_molecule(&mut molecules);
+
+        for (res_name, _, _, chain_id, terminated) in self.residues() {
             if chain_id != this_chain_id {
-                if !this_molecule.is_empty() {
-                    molecules.push(this_molecule);
-                }
-                this_molecule = Molecule::new();
+                this_molecule = start_new_molecule(&mut molecules);
             }
             this_chain_id = chain_id;
 
@@ -81,18 +82,13 @@ impl<S: Eq + Clone + Hash> PdbTopology<S> {
 
             // Handle residues that do not link to their neighbours (eg water)
             if residue.does_not_link() {
-                if !this_molecule.is_empty() {
-                    molecules.push(this_molecule);
-                }
-                molecules.push(Molecule::from(residue));
-                this_molecule = Molecule::new();
+                this_molecule = start_new_molecule(&mut molecules);
             } else {
-                this_molecule.extend_with(residue.to_owned());
+                this_molecule.extend_with(residue);
             }
 
-            if terminated & !this_molecule.is_empty() {
-                molecules.push(this_molecule);
-                this_molecule = Molecule::new();
+            if terminated {
+                this_molecule = start_new_molecule(&mut molecules);
             }
         }
 
@@ -101,28 +97,25 @@ impl<S: Eq + Clone + Hash> PdbTopology<S> {
 }
 
 impl<'s> PdbTopology<'s> {
-    pub fn res_names<'a>(&'a self) -> impl Iterator<Item = Cow<'s, str>> + 'a {
-        self.residues()
-            .map(|(res_name, ..)| res_name)
-    }
-
     /// Iterate over each residue by its identifiers.
     ///
     /// ```rust
     /// # use pdbmol_mol::pdb::PdbTopology
     /// # let pdbtopology = PdbTopology::default()
-    /// for (res_name, res_seq, i_code, chain_id, terminated) in pdbtopology.residues {
+    /// for (res_name, res_seq, i_code, chain_id, terminated) in pdbtopology.residues() {
     ///     println!(
     ///         "{res_name}#{res_seq}^{i_code}:{chain_id} is {}",
     ///         if terminated {"terminated"} else {"not terminated"}
     ///     )
     /// }
-    pub fn residues<'a>(&'a self) -> impl Iterator<Item = (S, i32, char, char, bool)> + 'a {
+    pub fn residues<'a: 's>(
+        &'a self
+    ) -> impl Iterator<Item = (&'s str, i32, char, char, bool)> + 'a {
         self.atoms
             .values()
             .map(|atom| {
                 (
-                    atom.record.res_name.clone(),
+                    atom.record.res_name.as_ref(),
                     atom.record.res_seq,
                     atom.record.i_code,
                     atom.record.chain_id,
@@ -130,14 +123,70 @@ impl<'s> PdbTopology<'s> {
                 )
             })
             .dedup()
+            .map(|(res_name, res_seq, i_code, chain_id, ter)| {
+                (res_name, res_seq, i_code, chain_id, ter.is_some())
+            })
+    }
+
+    /// Iterate over each atom by its identifiers.
+    ///
+    /// ```rust
+    /// # use pdbmol_mol::pdb::PdbTopology
+    /// # let pdbtopology = PdbTopology::default()
+    /// for (
+    ///     atom_name,
+    ///     atom_seq,
+    ///     res_name,
+    ///     res_seq,
+    ///     i_code,
+    ///     chain_id,
+    ///     terminated,
+    ///     element,
+    ///     charge,
+    ///     xyz
+    /// ) in pdbtopology.atoms() {
+    ///     # "
+    ///     ...
+    ///     # "
+    /// }
+    pub fn atoms<'a: 's>(
+        &'a self
+    ) -> impl Iterator<
+        Item = (
+            &'s str,
+            i32,
+            &'s str,
+            i32,
+            char,
+            char,
+            Option<i32>,
+            Element,
+            i8,
+            [f32; 3],
+        ),
+    > + 'a {
+        self.atoms.values().map(|atom| {
+            (
+                atom.record.name.as_ref(),
+                atom.record.serial,
+                atom.record.res_name.as_ref(),
+                atom.record.res_seq,
+                atom.record.i_code,
+                atom.record.chain_id,
+                atom.terminated,
+                atom.record.element,
+                atom.record.charge,
+                [atom.record.x, atom.record.y, atom.record.z],
+            )
+        })
     }
 }
 
-impl<S: Eq> PdbTopology<S> {
+impl<'s> PdbTopology<'s> {
     pub fn from_pdb_data(
-        pdb: impl IntoIterator<Item = Result<PdbRecord<S>, PdbParseErr>>
+        pdb: impl IntoIterator<Item = Result<PdbRecord<'s>, PdbParseErr>>
     ) -> Result<Self, MolFromPdbErr> {
-        let mut atoms: BTreeMap<i32, PdbAtom<S>> = BTreeMap::new();
+        let mut atoms: BTreeMap<i32, PdbAtom<'s>> = BTreeMap::new();
         let mut bonds = BondSet::new();
         let mut unit_cell = None;
 

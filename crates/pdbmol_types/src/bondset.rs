@@ -1,6 +1,7 @@
 use std::collections::BTreeSet;
 
 /// Stores bonds as pairs of atom identifiers
+#[derive(Debug, Default, Clone)]
 pub struct BondSet<T>(BTreeSet<(T, T)>);
 
 impl<T> BondSet<T> {
@@ -40,12 +41,6 @@ impl<T: Ord + Copy> BondSet<T> {
     ) {
         self.0.insert((a, b));
         self.0.insert((b, a));
-    }
-}
-
-impl<T> Default for BondSet<T> {
-    fn default() -> Self {
-        Self(BTreeSet::default())
     }
 }
 
