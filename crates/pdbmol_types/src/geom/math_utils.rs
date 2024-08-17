@@ -44,3 +44,11 @@ pub fn mul(
 ) -> [f32; 3] {
     [s * v[0], s * v[1], s * v[2]]
 }
+
+/// Angle between two vectors in radians
+pub fn angle_between_rad(
+    a: [f32; 3],
+    b: [f32; 3],
+) -> f32 {
+    (norm(cross(a, b)) / (norm(a) * norm(b))).asin()
+}

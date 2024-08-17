@@ -5,9 +5,31 @@
 
 use crate::bondset::BondSet;
 
-use super::{CubicUnitCell, OrthogonalUnitCell, UnitCell};
+use super::representations::{CubicUnitCell, OrthorhombicUnitCell};
+use super::UnitCell;
 
-impl OrthogonalUnitCell {
+impl OrthorhombicUnitCell {
+    fn tile_past_brick(
+        &self,
+        brick: &[f32; 3],
+        points: &[[f32; 3]],
+    ) -> Vec<[f32; 3]> {
+        let [x, y, z] = brick;
+        let [a, b, c] = self.to_vectors();
+
+        use crate::geom::math_utils::norm;
+        self.tile_points(
+            points,
+            [
+                (x / norm(a)).floor() as usize,
+                (y / norm(b)).floor() as usize,
+                (z / norm(c)).floor() as usize,
+            ],
+        )
+    }
+
+    /// Tile points in this unit cell to extend past the brick representation of the
+    /// target lattice.
     pub fn tile_past(
         &self,
         target: impl UnitCell,
@@ -17,19 +39,7 @@ impl OrthogonalUnitCell {
             todo!("get rotation from triclinic -> restricted triclinic");
         };
 
-        let brick = target.to_brick();
-        let [a, b, c] = self.to_vectors();
-        let [a_target, b_target, c_target] = brick.to_vectors();
-
-        use crate::geom::math_utils::norm;
-        let tiled = self.tile_points(
-            points,
-            [
-                (norm(a_target) / norm(a)).floor() as usize,
-                (norm(b_target) / norm(b)).floor() as usize,
-                (norm(c_target) / norm(c)).floor() as usize,
-            ],
-        );
+        let tiled = self.tile_past_brick(&target.lattice().brick(), points);
 
         if target.has_orientation() {
             todo!("rotate the tiled points by inverse of rotation");
@@ -38,6 +48,8 @@ impl OrthogonalUnitCell {
         tiled
     }
 
+    /// Tile points in this unit cell to exactly cover the brick representation
+    /// of the target lattice.
     pub fn tile_to(
         &self,
         target: impl UnitCell,
@@ -48,10 +60,9 @@ impl OrthogonalUnitCell {
             todo!("get rotation from triclinic -> restricted triclinic");
         };
 
-        let brick = target.to_brick();
-        let _tiled = self.tile_past(brick, points);
-        let _bonds = todo!("extend bonds according to tiling");
+        let _tiled = self.tile_past_brick(&target.lattice().brick(), points);
 
+        todo!("extend bonds according to tiling");
         todo!("trim points outside brick, and points bonded to them");
 
         if target.has_orientation() {
@@ -68,7 +79,7 @@ impl CubicUnitCell {
         points: &[[f32; 3]],
         target: impl UnitCell,
     ) -> Vec<[f32; 3]> {
-        OrthogonalUnitCell::from(*self).tile_past(target, points)
+        OrthorhombicUnitCell::from(*self).tile_past(target, points)
     }
 
     pub fn tile_to(
@@ -77,6 +88,6 @@ impl CubicUnitCell {
         bonds: BondSet<usize>,
         target: impl UnitCell,
     ) -> Vec<[f32; 3]> {
-        OrthogonalUnitCell::from(*self).tile_to(target, points, bonds)
+        OrthorhombicUnitCell::from(*self).tile_to(target, points, bonds)
     }
 }
