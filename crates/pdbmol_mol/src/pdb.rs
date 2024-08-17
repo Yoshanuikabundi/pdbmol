@@ -1,12 +1,13 @@
 use std::{
     collections::{BTreeMap, HashMap},
     hash::Hash,
+    ops::RangeInclusive,
 };
 
 use itertools::Itertools;
 use pdbmol_pdb::datatypes::{AtomRecord, PdbParseErr, PdbRecord};
 use pdbmol_types::{
-    geom::unitcell::{CrystallographicUnitCell, UnitCell},
+    geom::lattice::{representations::CrystallographicUnitCell, UnitCell},
     ResidueDefinition,
 };
 use thiserror::Error;
@@ -28,19 +29,20 @@ pub enum MolFromPdbErr {
 }
 
 #[derive(Debug, Clone)]
-pub struct PdbAtom<S> {
-    pub record: AtomRecord<S>,
+pub struct PdbAtom<'s> {
+    pub record: AtomRecord<'s>,
     pub terminated: Option<i32>,
 }
 
-impl<S> From<AtomRecord<S>> for PdbAtom<S> {
-    fn from(value: AtomRecord<S>) -> Self {
+impl<'s> From<AtomRecord<'s>> for PdbAtom<'s> {
+    fn from(value: AtomRecord<'s>) -> Self {
         Self { record: value, terminated: None }
     }
 }
 
-pub struct PdbTopology<S> {
-    atoms: BTreeMap<i32, PdbAtom<S>>,
+#[derive(Debug, Default)]
+pub struct PdbTopology<'s> {
+    atoms: BTreeMap<i32, PdbAtom<'s>>,
     bonds: BondSet,
     unit_cell: Option<CrystallographicUnitCell>,
 }
@@ -56,18 +58,18 @@ impl<S: Eq + Clone + Hash> PdbTopology<S> {
         &self,
         residue_database: HashMap<S, ResidueDefinition<S>>,
     ) -> Result<Vec<Molecule>, MolFromPdbErr> {
-        let mut current_chain = ' ';
-        let mut chains: Vec<Molecule> = Vec::new();
-        let mut molecule: Molecule = Molecule::new();
+        let mut molecules: BTreeMap<RangeInclusive<i32>, Molecule> = BTreeMap::new();
+        let mut this_chain_id = ' ';
+        let mut this_molecule: Molecule = Molecule::new();
 
-        for (res_name, chain_id, terminated) in self.residues_with_chain_and_ter() {
-            if chain_id != current_chain {
-                if !molecule.is_empty() {
-                    chains.push(molecule);
+        for (res_name, res_seq, i_code, chain_id, terminated) in self.residues() {
+            if chain_id != this_chain_id {
+                if !this_molecule.is_empty() {
+                    molecules.push(this_molecule);
                 }
-                molecule = Molecule::new();
+                this_molecule = Molecule::new();
             }
-            current_chain = chain_id;
+            this_chain_id = chain_id;
 
             // Eventually, we want to try and put something together from CONECT
             // records and formal charges and possibly a user-provided list of
@@ -79,46 +81,55 @@ impl<S: Eq + Clone + Hash> PdbTopology<S> {
 
             // Handle residues that do not link to their neighbours (eg water)
             if residue.does_not_link() {
-                if !molecule.is_empty() {
-                    chains.push(molecule);
+                if !this_molecule.is_empty() {
+                    molecules.push(this_molecule);
                 }
-                chains.push(Molecule::from(residue));
-                molecule = Molecule::new();
+                molecules.push(Molecule::from(residue));
+                this_molecule = Molecule::new();
             } else {
-                molecule.extend_with(residue);
+                this_molecule.extend_with(residue.to_owned());
             }
 
-            if terminated & !molecule.is_empty() {
-                chains.push(molecule);
-                molecule = Molecule::new();
+            if terminated & !this_molecule.is_empty() {
+                molecules.push(this_molecule);
+                this_molecule = Molecule::new();
             }
         }
 
-        Ok(chains)
+        Ok(molecules)
     }
 }
 
-impl<S: Eq + Clone> PdbTopology<S> {
-    pub fn res_names<'a>(&'a self) -> impl Iterator<Item = S> + 'a {
-        self.residues_with_chain_and_ter()
-            .map(|(res_name, _, _)| res_name)
+impl<'s> PdbTopology<'s> {
+    pub fn res_names<'a>(&'a self) -> impl Iterator<Item = Cow<'s, str>> + 'a {
+        self.residues()
+            .map(|(res_name, ..)| res_name)
     }
 
-    /// Iterate over the names of each residue with each residue's chain ID and terminated record.
-    pub fn residues_with_chain_and_ter<'a>(&'a self) -> impl Iterator<Item = (S, char, bool)> + 'a {
+    /// Iterate over each residue by its identifiers.
+    ///
+    /// ```rust
+    /// # use pdbmol_mol::pdb::PdbTopology
+    /// # let pdbtopology = PdbTopology::default()
+    /// for (res_name, res_seq, i_code, chain_id, terminated) in pdbtopology.residues {
+    ///     println!(
+    ///         "{res_name}#{res_seq}^{i_code}:{chain_id} is {}",
+    ///         if terminated {"terminated"} else {"not terminated"}
+    ///     )
+    /// }
+    pub fn residues<'a>(&'a self) -> impl Iterator<Item = (S, i32, char, char, bool)> + 'a {
         self.atoms
             .values()
             .map(|atom| {
                 (
-                    atom.record.chain_id,
-                    atom.record.res_seq,
                     atom.record.res_name.clone(),
+                    atom.record.res_seq,
                     atom.record.i_code,
+                    atom.record.chain_id,
                     atom.terminated,
                 )
             })
             .dedup()
-            .map(|(chain_id, _res_seq, res_name, _i_code, ter)| (res_name, chain_id, ter.is_some()))
     }
 }
 

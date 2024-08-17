@@ -1,10 +1,13 @@
+use bounded_static::ToStatic;
 use strum::{EnumIter, EnumString, FromRepr, IntoStaticStr};
 
 /// A chemical element.
 ///
 /// All elements' variant names are the element's name, and the discriminant is
 /// the atomic number.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, FromRepr, IntoStaticStr, EnumString, EnumIter)]
+#[derive(
+    Clone, Copy, Debug, PartialEq, Eq, FromRepr, IntoStaticStr, EnumString, EnumIter, ToStatic,
+)]
 #[repr(u8)]
 #[non_exhaustive]
 pub enum Element {

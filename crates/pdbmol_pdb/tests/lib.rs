@@ -6,8 +6,6 @@ fn reads_and_writes_standard_pdb() {
         let records = pdbmol_pdb::parse(&pdb_str);
 
         let errors: Vec<_> = records
-            .iter()
-            .cloned()
             .filter_map(Result::err)
             .collect();
         assert!(

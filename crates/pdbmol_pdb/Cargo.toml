@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 thiserror = "1.0.63"
 pdbmol_types = { path = "../pdbmol_types" }
+bounded-static = { version = "0.8.0", features = ["derive"] }
 
 [lints]
 workspace = true

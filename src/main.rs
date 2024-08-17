@@ -14,7 +14,7 @@ use pdbmol::parser::pdb;
 
 fn main() {
     for filename in env::args().skip(1) {
-        let records = pdb::load(&filename);
+        let records = pdb::load_from_file(&filename);
         match &records {
             Err(e) => {
                 eprintln!("Errors encountered loading {filename}: {e}");

@@ -1,9 +1,10 @@
 //! <https://mmcif.wwpdb.org/dictionaries/mmcif_pdbx_v50.dic/Categories/chem_comp.html>
 
-use std::{collections::HashMap, fmt::Debug, str::FromStr};
+use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use pdbmol_cif::ParsedDataBlock;
 use pdbmol_types::{
+    residue::LinkingBond,
     stereo::{AtomStereo, BondStereo},
     ResidueDefinition,
 };
@@ -79,6 +80,18 @@ impl FromStr for LinkingType {
     }
 }
 
+impl LinkingType {
+    fn bonds(&self) -> Vec<pdbmol_types::residue::LinkingBond<'static>> {
+        use LinkingType::*;
+
+        match self {
+            NonPolymer => vec![],
+            LPeptideLinking | DPeptideLinking => vec![LinkingBond::new("C", "N", 1)],
+            _ => todo!(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct CcdResidue<'s> {
     /// Residue ID code
@@ -100,10 +113,13 @@ pub struct CcdResidue<'s> {
     pub bonds: Bonds<'s>,
 }
 
-impl<'s> From<CcdResidue<'s>> for ResidueDefinition<&'s str> {
+impl<'s> From<CcdResidue<'s>> for ResidueDefinition<'s> {
     fn from(value: CcdResidue<'s>) -> Self {
-        let CcdResidue { id, .. } = value;
-        Self { id }
+        let CcdResidue { id, linking_type, .. } = value;
+        Self {
+            id: Cow::from(id),
+            linking_bonds: linking_type.bonds(),
+        }
     }
 }
 

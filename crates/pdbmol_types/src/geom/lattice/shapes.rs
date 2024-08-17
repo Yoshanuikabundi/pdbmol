@@ -7,8 +7,8 @@ pub struct RhombicDodecahedronHex;
 pub struct Cube;
 pub struct TruncatedOctahedron;
 
-const SQRT_3: f32 = 1.73205080757;
-const SQRT_6: f32 = 2.44948974278;
+const SQRT_3: f32 = 1.7320508;
+const SQRT_6: f32 = 2.4494898;
 
 pub trait LatticeShape {
     const UNIT_IMAGE_DISTANCE: [[f32; 3]; 3];

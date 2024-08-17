@@ -1,7 +1,5 @@
 use std::f32::consts::PI;
 
-use crate::geom::{lattice::UnitCell, math_utils::*};
-
 use super::representations::{
     CrystallographicUnitCell, CubicUnitCell, OrientedTriclinicUnitCell, OrthorhombicUnitCell,
     TriclinicUnitCell,
