@@ -3,7 +3,7 @@
     allow(dead_code, unused_variables, unreachable_code,)
 )]
 
-use crate::bondset::BondSet;
+use crate::bonds::BondSet;
 
 use super::representations::{CubicUnitCell, OrthorhombicUnitCell};
 use super::UnitCell;

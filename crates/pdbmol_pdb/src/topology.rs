@@ -5,6 +5,7 @@ use bounded_static::{IntoBoundedStatic, ToBoundedStatic, ToStatic};
 use itertools::Itertools;
 use pdbmol_types::{
     geom::lattice::{representations::CrystallographicUnitCell, UnitCell},
+    residue::BondDefinition,
     stereo::AtomStereo,
     Element, ResidueDefinition,
 };
@@ -61,12 +62,12 @@ pub struct PdbAtom<'s> {
     pub name: Cow<'s, str>,
     pub element: Element,
     pub charge: i8,
-    /// `None` represents an atom missing from the PDB file
-    pub serial: Option<i32>,
-    /// `None` represents an atom missing from the PDB file
-    pub alt_loc: Option<char>,
-    /// `None` represents an atom missing from the PDB file
-    pub xyz: Option<[f32; 3]>,
+    /// Empty if atom is in residue DB but not PDB file
+    pub serial: Vec<i32>,
+    /// Empty if atom is in residue DB but not PDB file
+    pub alt_loc: Vec<char>,
+    /// Empty if atom is in residue DB but not PDB file
+    pub xyz: Vec<[f32; 3]>,
     /// `None` represents an atom from an unknown ligand
     pub leaving: Option<bool>,
     /// `None` represents an atom from an unknown ligand
@@ -85,6 +86,15 @@ pub struct PdbResidue<'s, 'd> {
     pub terminated: bool,
     /// `None` represents an unknown residue
     pub definition: Option<ResidueDefinition<'d>>,
+}
+
+impl PdbResidue<'_, '_> {
+    fn in_same_chain(
+        &self,
+        second: &Self,
+    ) -> bool {
+        !(self.terminated | (self.chain_id != second.chain_id))
+    }
 }
 
 #[derive(Debug, Default)]
@@ -192,16 +202,25 @@ impl<'s, 'd> PdbTopology<'s, 'd> {
                     res_name: res_name.to_string(),
                 })?;
 
-            if residue
+            if let Some(duplicate_atom) = residue
                 .atoms
-                .iter()
-                .any(|record| record.name == name)
+                .iter_mut()
+                .find(|record| record.name == name)
             {
-                Err(PdbTopologyError::DuplicateAtomNameInResidue {
-                    name: name.into_owned(),
-                    res_name: res_name.into_owned(),
-                    res_seq,
-                })
+                if duplicate_atom
+                    .alt_loc
+                    .contains(&alt_loc)
+                {
+                    Err(PdbTopologyError::DuplicateAtomNameInResidue {
+                        name: name.into_owned(),
+                        res_name: res_name.into_owned(),
+                        res_seq,
+                    })
+                } else {
+                    duplicate_atom.alt_loc.push(alt_loc);
+                    duplicate_atom.xyz.push([x, y, z]);
+                    Ok(())
+                }
             } else if db_atom.element != element {
                 Err(PdbTopologyError::AtomElementMismatch {
                     name: name.into_owned(),
@@ -223,9 +242,9 @@ impl<'s, 'd> PdbTopology<'s, 'd> {
                     name,
                     element,
                     charge,
-                    serial: Some(serial),
-                    alt_loc: Some(alt_loc),
-                    xyz: Some([x, y, z]),
+                    serial: vec![serial],
+                    alt_loc: vec![alt_loc],
+                    xyz: vec![[x, y, z]],
                     leaving: Some(db_atom.leaving),
                     stereo: Some(db_atom.stereo),
                     aromatic: Some(db_atom.aromatic),
@@ -238,9 +257,9 @@ impl<'s, 'd> PdbTopology<'s, 'd> {
                 name,
                 element,
                 charge,
-                serial: Some(serial),
-                alt_loc: Some(alt_loc),
-                xyz: Some([x, y, z]),
+                serial: vec![serial],
+                alt_loc: vec![alt_loc],
+                xyz: vec![[x, y, z]],
                 leaving: None,
                 stereo: None,
                 aromatic: None,
@@ -264,34 +283,22 @@ impl<'s, 'd> PdbTopology<'s, 'd> {
             .flat_map(|residue| &residue.atoms)
     }
 
-    /// Add any atoms from the residue definition that aren't yet in the residue
-    /// and then add bonds
-    fn complete_last_residue(&mut self) {
-        if let Some(last_residue) = self.residues.last_mut() {
-            if let Some(last_residue_def) = &last_residue.definition {
-                let last_residue_atom_names = last_residue
+    pub fn atoms_with_residues<'a>(
+        &'a self
+    ) -> impl Iterator<Item = (&'a PdbResidue<'s, 'd>, &'a PdbAtom<'s>)> {
+        self.residues
+            .iter()
+            .flat_map(|residue| {
+                residue
                     .atoms
                     .iter()
-                    .map(|record| record.name.clone())
-                    .collect_vec();
-
-                for (db_atom_name, db_atom) in &last_residue_def.atoms {
-                    if !last_residue_atom_names.contains(db_atom_name) {
-                        last_residue.atoms.push(PdbAtom {
-                            serial: None,
-                            name: db_atom_name.to_static(),
-                            alt_loc: None,
-                            element: db_atom.element,
-                            charge: db_atom.charge,
-                            xyz: None,
-                            leaving: Some(db_atom.leaving),
-                            stereo: Some(db_atom.stereo),
-                            aromatic: Some(db_atom.aromatic),
-                        })
-                    }
-                }
-            }
-        }
+                    .map(|atom| {
+                        let residue: &'a PdbResidue<'s, 'd> = residue;
+                        let atom: &'a PdbAtom<'s> = atom;
+                        (residue, atom)
+                    })
+                    .inspect(|_| ())
+            })
     }
 
     fn start_next_residue(
@@ -318,6 +325,65 @@ impl<'s, 'd> PdbTopology<'s, 'd> {
         self.residues.last_mut().unwrap()
     }
 
+    /// Add any atoms from the residue definition that aren't yet in the residue
+    /// and then add bonds
+    fn complete_last_residue(&mut self) {
+        if let Some(last_residue) = self.residues.last_mut() {
+            if let Some(last_residue_def) = &last_residue.definition {
+                let last_residue_atom_names = last_residue
+                    .atoms
+                    .iter()
+                    .map(|record| record.name.clone())
+                    .collect_vec();
+
+                for (db_atom_name, db_atom) in &last_residue_def.atoms {
+                    if !last_residue_atom_names.contains(db_atom_name) {
+                        last_residue.atoms.push(PdbAtom {
+                            serial: vec![],
+                            name: db_atom_name.to_static(),
+                            alt_loc: vec![],
+                            element: db_atom.element,
+                            charge: db_atom.charge,
+                            xyz: vec![],
+                            leaving: Some(db_atom.leaving),
+                            stereo: Some(db_atom.stereo),
+                            aromatic: Some(db_atom.aromatic),
+                        })
+                    }
+                }
+            }
+        }
+        self.link_last_two_residues();
+    }
+
+    /// Removes leaving atoms from the linkage between the last two residues
+    fn link_last_two_residues<'a>(&'a mut self) {
+        if let [.., prev_res, last_res] = &mut self.residues[..] {
+            if !prev_res.in_same_chain(last_res) {
+                return;
+            }
+
+            if let (Some(db_prev_res), Some(db_last_res)) =
+                (&prev_res.definition, &last_res.definition)
+            {
+                for BondDefinition { atom_name1, atom_name2, .. } in db_prev_res
+                    .linking_type
+                    .bonds(&db_last_res.linking_type)
+                {
+                    let leaving_atoms = db_prev_res.linked_leaving_atoms(atom_name1);
+                    prev_res
+                        .atoms
+                        .retain(|PdbAtom { name, .. }| !leaving_atoms.contains(name.as_ref()));
+
+                    let leaving_atoms = db_last_res.linked_leaving_atoms(atom_name2);
+                    last_res
+                        .atoms
+                        .retain(|PdbAtom { name, .. }| !leaving_atoms.contains(name.as_ref()));
+                }
+            }
+        }
+    }
+
     fn load_atoms_from_records(
         &mut self,
         records: impl IntoIterator<Item = Result<PdbRecord<'s>, PdbRecordParseError>>,
@@ -342,10 +408,12 @@ impl<'s, 'd> PdbTopology<'s, 'd> {
                     )
                     .ok()
                 }
+                PdbRecord::Link | PdbRecord::SsBond { .. } => todo!(),
                 PdbRecord::Ter { .. } => self.terminate_residue()?,
                 _ => continue,
             }
         }
+        self.complete_last_residue();
         Ok(())
     }
 }

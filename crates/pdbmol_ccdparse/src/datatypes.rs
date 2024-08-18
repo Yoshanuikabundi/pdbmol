@@ -4,95 +4,10 @@ use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use pdbmol_cif::ParsedDataBlock;
 use pdbmol_types::{
-    residue::{AtomDefinition, BondDefinition},
+    residue::{AtomDefinition, BondDefinition, LinkingType},
     stereo::{AtomStereo, BondStereo},
     Element, ResidueDefinition,
 };
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum LinkingType {
-    DBetaPeptideCGammaLinking,
-    DGammaPeptideCDeltaLinking,
-    DPeptideCoohCarboxyTerminus,
-    DPeptideNh3AminoTerminus,
-    DPeptideLinking,
-    DSaccharide,
-    DSaccharideAlphaLinking,
-    DSaccharideBetaLinking,
-    DNAOh3PrimeTerminus,
-    DNAOh5PrimeTerminus,
-    DNALinking,
-    LDNALinking,
-    LRNALinking,
-    LBetaPeptideCGammaLinking,
-    LGammaPeptideCDeltaLinking,
-    LPeptideCoohCarboxyTerminus,
-    LPeptideNh3AminoTerminus,
-    LPeptideLinking,
-    LSaccharide,
-    LSaccharideAlphaLinking,
-    LSaccharideBetaLinking,
-    RNAOh3PrimeTerminus,
-    RNAOh5PrimeTerminus,
-    RNALinking,
-    NonPolymer,
-    Other,
-    PeptideLinking,
-    PeptideLike,
-    Saccharide,
-}
-
-impl FromStr for LinkingType {
-    type Err = String;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "d-beta-peptide, c-gamma linking" => Ok(Self::DBetaPeptideCGammaLinking),
-            "d-gamma-peptide, c-delta linking" => Ok(Self::DGammaPeptideCDeltaLinking),
-            "d-peptide cooh carboxy terminus" => Ok(Self::DPeptideCoohCarboxyTerminus),
-            "d-peptide nh3 amino terminus" => Ok(Self::DPeptideNh3AminoTerminus),
-            "d-peptide linking" => Ok(Self::DPeptideLinking),
-            "d-saccharide" => Ok(Self::DSaccharide),
-            "d-saccharide, alpha linking" => Ok(Self::DSaccharideAlphaLinking),
-            "d-saccharide, beta linking" => Ok(Self::DSaccharideBetaLinking),
-            "dna oh 3 prime terminus" => Ok(Self::DNAOh3PrimeTerminus),
-            "dna oh 5 prime terminus" => Ok(Self::DNAOh5PrimeTerminus),
-            "dna linking" => Ok(Self::DNALinking),
-            "l-dna linking" => Ok(Self::LDNALinking),
-            "l-rna linking" => Ok(Self::LRNALinking),
-            "l-beta-peptide, c-gamma linking" => Ok(Self::LBetaPeptideCGammaLinking),
-            "l-gamma-peptide, c-delta linking" => Ok(Self::LGammaPeptideCDeltaLinking),
-            "l-peptide cooh carboxy terminus" => Ok(Self::LPeptideCoohCarboxyTerminus),
-            "l-peptide nh3 amino terminus" => Ok(Self::LPeptideNh3AminoTerminus),
-            "l-peptide linking" => Ok(Self::LPeptideLinking),
-            "l-saccharide" => Ok(Self::LSaccharide),
-            "l-saccharide, alpha linking" => Ok(Self::LSaccharideAlphaLinking),
-            "l-saccharide, beta linking" => Ok(Self::LSaccharideBetaLinking),
-            "rna oh 3 prime terminus" => Ok(Self::RNAOh3PrimeTerminus),
-            "rna oh 5 prime terminus" => Ok(Self::RNAOh5PrimeTerminus),
-            "rna linking" => Ok(Self::RNALinking),
-            "non-polymer" => Ok(Self::NonPolymer),
-            "other" => Ok(Self::Other),
-            "peptide linking" => Ok(Self::PeptideLinking),
-            "peptide-like" => Ok(Self::PeptideLike),
-            "saccharide" => Ok(Self::Saccharide),
-            s => Err(format!("{s} is not a known linking type")),
-        }
-    }
-}
-
-impl LinkingType {
-    fn bonds(&self) -> Vec<pdbmol_types::residue::BondDefinition<'static>> {
-        use LinkingType::*;
-
-        match self {
-            NonPolymer => vec![],
-            LPeptideLinking | DPeptideLinking => {
-                vec![BondDefinition::new("C", "N", 1, BondStereo::None, false)]
-            }
-            _ => todo!(),
-        }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CcdResidue<'s> {
@@ -120,7 +35,7 @@ impl<'s> From<CcdResidue<'s>> for ResidueDefinition<'s> {
         let CcdResidue { id, linking_type, atoms, bonds, .. } = value;
         Self {
             id: Cow::from(id),
-            linking_bonds: linking_type.bonds(),
+            linking_type,
             atoms: atoms.into(),
             bonds: bonds.into(),
         }

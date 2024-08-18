@@ -1,8 +1,8 @@
 mod elements;
 pub use elements::Element;
 
-mod bondset;
-pub use bondset::BondSet;
+mod bonds;
+pub use bonds::BondSet;
 
 pub mod residue;
 pub use residue::ResidueDefinition;
