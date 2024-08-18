@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 pub fn dot(
     a: [f32; 3],
     b: [f32; 3],

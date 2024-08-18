@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use bounded_static::ToStatic;
 use strum::{EnumIter, EnumString, FromRepr, IntoStaticStr};
 
@@ -6,7 +8,7 @@ use strum::{EnumIter, EnumString, FromRepr, IntoStaticStr};
 /// All elements' variant names are the element's name, and the discriminant is
 /// the atomic number.
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, FromRepr, IntoStaticStr, EnumString, EnumIter, ToStatic,
+    Clone, Debug, Copy, PartialEq, Eq, FromRepr, IntoStaticStr, EnumString, EnumIter, ToStatic,
 )]
 #[repr(u8)]
 #[non_exhaustive]
@@ -129,6 +131,15 @@ pub enum Element {
     Livermorium,
     Tennessine,
     Oganesson,
+}
+
+impl Display for Element {
+    fn fmt(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+    ) -> std::fmt::Result {
+        write!(f, "{}", self.name())
+    }
 }
 
 impl Element {

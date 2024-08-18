@@ -148,6 +148,7 @@ dependencies = [
 name = "pdbmol_mol"
 version = "0.1.0"
 dependencies = [
+ "bounded-static",
  "itertools",
  "pdbmol_ccdparse",
  "pdbmol_pdb",
@@ -160,6 +161,7 @@ name = "pdbmol_pdb"
 version = "0.1.0"
 dependencies = [
  "bounded-static",
+ "itertools",
  "pdbmol_types",
  "thiserror",
 ]

@@ -2,10 +2,8 @@ use std::collections::HashMap;
 
 use pdbmol_types::{
     stereo::{AtomStereo, BondStereo},
-    Element, ResidueDefinition,
+    Element,
 };
-
-pub mod pdb;
 
 #[derive(Clone, Debug)]
 pub enum MetadataValue {
@@ -79,18 +77,5 @@ impl Molecule {
     /// A molecule is empty iff it has no atoms.
     fn is_empty(&self) -> bool {
         self.atoms.is_empty()
-    }
-
-    fn extend_with(
-        &mut self,
-        residue: &ResidueDefinition,
-    ) -> Self {
-        todo!()
-    }
-}
-
-impl From<ResidueDefinition<'_>> for Molecule {
-    fn from(value: ResidueDefinition) -> Self {
-        Self::new().extend_with(&value)
     }
 }

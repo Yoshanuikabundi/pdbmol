@@ -1,6 +1,8 @@
 use std::str::FromStr;
 
-#[derive(Debug, Clone, PartialEq)]
+use bounded_static::ToStatic;
+
+#[derive(Debug, Clone, PartialEq, ToStatic, Copy)]
 pub enum AtomStereo {
     R,
     S,
@@ -20,7 +22,7 @@ impl FromStr for AtomStereo {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, ToStatic, Copy)]
 pub enum BondStereo {
     E,
     Z,

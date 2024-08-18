@@ -4,9 +4,9 @@ use std::{borrow::Cow, collections::HashMap, fmt::Debug, str::FromStr};
 
 use pdbmol_cif::ParsedDataBlock;
 use pdbmol_types::{
-    residue::LinkingBond,
+    residue::{AtomDefinition, BondDefinition},
     stereo::{AtomStereo, BondStereo},
-    ResidueDefinition,
+    Element, ResidueDefinition,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -81,12 +81,14 @@ impl FromStr for LinkingType {
 }
 
 impl LinkingType {
-    fn bonds(&self) -> Vec<pdbmol_types::residue::LinkingBond<'static>> {
+    fn bonds(&self) -> Vec<pdbmol_types::residue::BondDefinition<'static>> {
         use LinkingType::*;
 
         match self {
             NonPolymer => vec![],
-            LPeptideLinking | DPeptideLinking => vec![LinkingBond::new("C", "N", 1)],
+            LPeptideLinking | DPeptideLinking => {
+                vec![BondDefinition::new("C", "N", 1, BondStereo::None, false)]
+            }
             _ => todo!(),
         }
     }
@@ -115,11 +117,67 @@ pub struct CcdResidue<'s> {
 
 impl<'s> From<CcdResidue<'s>> for ResidueDefinition<'s> {
     fn from(value: CcdResidue<'s>) -> Self {
-        let CcdResidue { id, linking_type, .. } = value;
+        let CcdResidue { id, linking_type, atoms, bonds, .. } = value;
         Self {
             id: Cow::from(id),
             linking_bonds: linking_type.bonds(),
+            atoms: atoms.into(),
+            bonds: bonds.into(),
         }
+    }
+}
+
+impl<'s> From<Atoms<'s>> for HashMap<Cow<'s, str>, AtomDefinition> {
+    fn from(value: Atoms<'s>) -> Self {
+        let Atoms {
+            symbol, charge, leaving, aromatic, stereo, atom_id, ..
+        } = value;
+        symbol
+            .into_iter()
+            .map(Element::from_uncased_symbol)
+            .map(Option::unwrap)
+            .zip(charge.into_iter().map(Option::unwrap))
+            .zip(leaving)
+            .zip(aromatic)
+            .zip(stereo)
+            .map(
+                |((((element, charge), leaving), aromatic), stereo)| AtomDefinition {
+                    element,
+                    charge: charge.try_into().unwrap(),
+                    leaving,
+                    stereo,
+                    aromatic,
+                },
+            )
+            .zip(atom_id)
+            .map(|(def, name)| (Cow::from(name), def))
+            .collect()
+    }
+}
+
+impl<'s> From<Bonds<'s>> for Vec<BondDefinition<'s>> {
+    fn from(value: Bonds<'s>) -> Self {
+        let Bonds { atom1, atom2, order, aromatic, stereo } = value;
+        atom1
+            .into_iter()
+            .zip(atom2)
+            .zip(order)
+            .zip(aromatic)
+            .zip(stereo)
+            .map(
+                |((((atom1, atom2), order), aromatic), stereo)| BondDefinition {
+                    atom_name1: Cow::from(atom1),
+                    atom_name2: Cow::from(atom2),
+                    order: match order {
+                        BondOrder::Single => 1,
+                        BondOrder::Double => 2,
+                        BondOrder::Triple => 3,
+                    },
+                    stereo,
+                    aromatic,
+                },
+            )
+            .collect()
     }
 }
 

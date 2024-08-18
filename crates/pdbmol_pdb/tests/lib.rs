@@ -1,9 +1,9 @@
 #[test]
 fn reads_and_writes_standard_pdb() {
-    for pdbfile in ["1po0.pdb", "2l7v.pdb"] {
+    for pdbfile in ["1po0.pdb", "2l7v.pdb", "1yyy.pdb"] {
         let path = format!("../../data/{pdbfile}");
         let pdb_str = std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("{path:?}"));
-        let records = pdbmol_pdb::parse(&pdb_str);
+        let records = pdbmol_pdb::stream_records(&pdb_str);
 
         let errors: Vec<_> = records
             .filter_map(Result::err)

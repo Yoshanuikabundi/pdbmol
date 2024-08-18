@@ -407,7 +407,7 @@ impl<'s> Display for PdbRecord<'s> {
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 #[non_exhaustive]
-pub enum PdbParseErr {
+pub enum PdbRecordParseError {
     #[error("record type {0} is unknown")]
     UnknownRecordType(String),
     #[error("expected a {expected} record, found {found}")]
@@ -431,7 +431,7 @@ pub enum PdbParseErr {
     UnknownElement(String),
 }
 
-type Result<T, E = PdbParseErr> = std::result::Result<T, E>;
+type Result<T, E = PdbRecordParseError> = std::result::Result<T, E>;
 
 pub struct PdbRecordParser<'t> {
     lines: Peekable<Lines<'t>>,
@@ -465,11 +465,11 @@ impl<'t> PdbRecordParser<'t> {
         let continuation_line = self
             .lines
             .next()
-            .ok_or(PdbParseErr::UnexpectedEof)?;
+            .ok_or(PdbRecordParseError::UnexpectedEof)?;
         if continuation_line.starts_with(record_name) {
             Ok(continuation_line)
         } else {
-            Err(PdbParseErr::UnexpectedRecord {
+            Err(PdbRecordParseError::UnexpectedRecord {
                 expected: record_name,
                 found: continuation_line[..6].to_owned(),
             })
@@ -511,7 +511,7 @@ impl<'t> PdbRecordParser<'t> {
     ) -> Result<Cow<'t, str>> {
         let line = self.get_current_line();
         line.get(range)
-            .ok_or(PdbParseErr::LineTooShort(line.to_owned()))
+            .ok_or(PdbRecordParseError::LineTooShort(line.to_owned()))
             .map(Cow::from)
     }
 
@@ -522,7 +522,7 @@ impl<'t> PdbRecordParser<'t> {
     ) -> Result<Cow<'t, str>> {
         let line = self.get_current_line();
         line.get(range)
-            .ok_or(PdbParseErr::LineTooShort(line.to_owned()))
+            .ok_or(PdbRecordParseError::LineTooShort(line.to_owned()))
             .map(str::trim)
             .map(Cow::from)
     }
@@ -530,11 +530,11 @@ impl<'t> PdbRecordParser<'t> {
     fn try_parsed_field<F>(
         &self,
         range: RangeInclusive<usize>,
-    ) -> Result<F, PdbParseErr>
+    ) -> Result<F, PdbRecordParseError>
     where
         F: FromStr,
-        F::Err: Into<PdbParseErr>,
-        PdbParseErr: From<F::Err>,
+        F::Err: Into<PdbRecordParseError>,
+        PdbRecordParseError: From<F::Err>,
     {
         Ok(self.try_field(range)?.trim().parse()?)
     }
@@ -542,7 +542,7 @@ impl<'t> PdbRecordParser<'t> {
     fn try_char_field(
         &self,
         index: usize,
-    ) -> Result<char, PdbParseErr> {
+    ) -> Result<char, PdbRecordParseError> {
         Ok(self
             .try_field(index..=index)?
             .chars()
@@ -583,7 +583,7 @@ impl<'t> PdbRecordParser<'t> {
             .collect();
 
         if res_names.len() != num_res {
-            Err(PdbParseErr::SeqresResnameCountMismatch {
+            Err(PdbRecordParseError::SeqresResnameCountMismatch {
                 expected: num_res,
                 found: res_names.len(),
             })
@@ -609,15 +609,15 @@ impl<'t> PdbRecordParser<'t> {
             element: {
                 let symbol = self.try_field_trimmed(76..=77)?;
                 Element::from_uncased_symbol(symbol.as_ref())
-                    .ok_or_else(|| PdbParseErr::UnknownElement(symbol.to_string()))?
+                    .ok_or_else(|| PdbRecordParseError::UnknownElement(symbol.to_string()))?
             },
             charge: {
                 match self.try_field(78..=79) {
                     Ok(s) if &s[1..] == "+" => s[..1].parse()?,
                     Ok(s) if &s[1..] == "-" => -s[..1].parse()?,
                     Ok(s) if s.trim() == "" => 0,
-                    Ok(s) => Err(PdbParseErr::CouldNotParseCharge(s.to_string()))?,
-                    Err(PdbParseErr::LineTooShort(_)) => 0,
+                    Ok(s) => Err(PdbRecordParseError::CouldNotParseCharge(s.to_string()))?,
+                    Err(PdbRecordParseError::LineTooShort(_)) => 0,
                     Err(e) => Err(e)?,
                 }
             },
@@ -720,7 +720,7 @@ impl<'t> PdbRecordParser<'t> {
             }),
             "MASTER" => Ok(PdbRecord::Master),
             "END   " => Ok(PdbRecord::End),
-            s => Err(PdbParseErr::UnknownRecordType(s.to_owned())),
+            s => Err(PdbRecordParseError::UnknownRecordType(s.to_owned())),
         }
     }
 }

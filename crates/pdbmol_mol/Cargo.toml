@@ -9,6 +9,7 @@ pdbmol_pdb = { path = "../pdbmol_pdb" }
 pdbmol_ccdparse = { path = "../pdbmol_ccdparse" }
 thiserror = "1.0.63"
 itertools = "0.13.0"
+bounded-static = { version = "0.8.0", features = ["derive"] }
 
 [lints]
 workspace = true
