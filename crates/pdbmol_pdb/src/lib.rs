@@ -3,12 +3,11 @@ use std::collections::HashMap;
 use bounded_static::IntoBoundedStatic;
 
 pub mod parser;
-pub mod topology;
+// pub mod topology;
 
-use parser::PdbRecordParser;
-use parser::{AtomRecord, PdbRecord, PdbRecordParseError};
+use parser::{PdbRecord, PdbRecordParseError};
 use pdbmol_types::ResidueDefinition;
-use topology::{PdbTopology, PdbTopologyError};
+// use topology::{PdbTopology, PdbTopologyError};
 
 /// Load records from a file into memory
 pub fn load_records_from_file(
@@ -22,7 +21,7 @@ pub fn load_records_from_file(
 pub fn stream_records<'s>(
     s: &'s str
 ) -> impl Iterator<Item = Result<PdbRecord<'s>, PdbRecordParseError>> {
-    PdbRecordParser::from_str(s)
+    s.lines().map(PdbRecord::try_from)
 }
 
 /// Load records from a string into a vector
@@ -32,20 +31,20 @@ pub fn load_records<'s>(s: &'s str) -> Vec<Result<PdbRecord<'static>, PdbRecordP
         .collect()
 }
 
-/// Load a PDB from a string into a PdbTopology object
-pub fn load<'s, 'd>(
-    s: &'s str,
-    residue_database: &HashMap<&'d str, ResidueDefinition<'d>>,
-) -> Result<PdbTopology<'s, 'd>, PdbTopologyError> {
-    let records = stream_records(s);
-    PdbTopology::<'s, 'd>::from_records(records, residue_database)
-}
+// /// Load a PDB from a string into a PdbTopology object
+// pub fn load<'s, 'd>(
+//     s: &'s str,
+//     residue_database: &HashMap<&'d str, ResidueDefinition<'d>>,
+// ) -> Result<PdbTopology<'s, 'd>, PdbTopologyError> {
+//     let records = stream_records(s);
+//     PdbTopology::<'s, 'd>::from_records(records, residue_database)
+// }
 
-/// Create a PdbTopology object from a file
-pub fn load_from_file<'d>(
-    path: impl AsRef<std::path::Path>,
-    residue_database: &HashMap<&'d str, ResidueDefinition<'d>>,
-) -> Result<PdbTopology<'static, 'd>, PdbTopologyError> {
-    let contents = std::fs::read_to_string(path)?;
-    load(&contents, residue_database).map(IntoBoundedStatic::into_static)
-}
+// /// Create a PdbTopology object from a file
+// pub fn load_from_file<'d>(
+//     path: impl AsRef<std::path::Path>,
+//     residue_database: &HashMap<&'d str, ResidueDefinition<'d>>,
+// ) -> Result<PdbTopology<'static, 'd>, PdbTopologyError> {
+//     let contents = std::fs::read_to_string(path)?;
+//     load(&contents, residue_database).map(IntoBoundedStatic::into_static)
+// }

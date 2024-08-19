@@ -1,6 +1,6 @@
 use std::{borrow::Cow, collections::HashMap};
 
-use super::{AtomRecord, PdbRecord, PdbRecordParseError};
+use super::{PdbRecord, PdbRecordParseError};
 use bounded_static::{IntoBoundedStatic, ToBoundedStatic, ToStatic};
 use itertools::Itertools;
 use pdbmol_types::{
