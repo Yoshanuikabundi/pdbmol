@@ -14,6 +14,8 @@ pub use types::ConectBonds;
 pub enum PdbRecordParseError {
     #[error("record type {0} is unknown")]
     UnknownRecordType(String),
+    #[error("record expected, found empty line")]
+    EmptyLine,
     #[error("expected a {expected} record, found {found}")]
     UnexpectedRecord {
         expected: &'static str,

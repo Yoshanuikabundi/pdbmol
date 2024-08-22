@@ -1,16 +1,19 @@
+use itertools::Itertools;
+
 #[test]
 fn reads_and_writes_standard_pdb() {
     for pdbfile in ["1po0.pdb", "2l7v.pdb", "1yyy.pdb"] {
         let path = format!("../../data/{pdbfile}");
         let pdb_str = std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("{path:?}"));
-        let records = pdbmol_pdb::stream_records(&pdb_str);
+        let records = pdbmol_pdb::stream_records(&pdb_str).collect_vec();
 
         let errors: Vec<_> = records
-            .filter_map(Result::err)
+            .iter()
+            .filter(|r| r.is_err())
             .collect();
         assert!(
             errors.is_empty(),
-            "errors encountered while parsing pdb records: {errors:#?}"
+            "errors encountered while parsing pdb records from {path:?}: {errors:#?}"
         );
 
         let mut lines_iter = pdb_str.lines();

@@ -1,12 +1,9 @@
-use std::collections::HashMap;
-
 use bounded_static::IntoBoundedStatic;
 
 pub mod parser;
 // pub mod topology;
 
 use parser::{PdbRecord, PdbRecordParseError};
-use pdbmol_types::ResidueDefinition;
 // use topology::{PdbTopology, PdbTopologyError};
 
 /// Load records from a file into memory

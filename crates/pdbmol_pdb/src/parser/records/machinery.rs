@@ -1,10 +1,17 @@
 macro_rules! pdb_records_inner {
-    ($($(#[$($attrss:tt)*])* $variantname:ident => { $($columnname:ident : $columntype:ty = line[$columnstart:literal ..= $columnend:literal]),*}, )+ ) => {
+    ($($(
+        #[$($attrss:tt)*])*
+        $variantname:ident =>
+        { $(
+            $columnname:ident : $columntype:ty
+            = line[$columnstart:literal ..= $columnend:literal]$(.$parsepostproc:ident())*
+            <=> $writer:expr
+        ),*},
+    )+ ) => {
         use paste::paste;
         paste!{
             use crate::parser::PdbRecordParseError;
             use crate::parser::types::ParseFromPdb;
-            use crate::parser::types::WriteToPdb;
             use std::fmt::Display;
             use bounded_static::ToStatic;
 
@@ -17,10 +24,10 @@ macro_rules! pdb_records_inner {
             }
 
             impl PdbRecord<'_> {
-                fn prefix(&self) -> &'static str {
+                const fn prefix(&self) -> &'static str {
                     match self {
                         $(
-                            PdbRecord::$variantname {..} => paste!(stringify!([<$variantname:upper>])),
+                            PdbRecord::$variantname {..} => stringify!([<$variantname:upper>]),
                         )*
                     }
                 }
@@ -30,37 +37,27 @@ macro_rules! pdb_records_inner {
                 type Error = PdbRecordParseError;
 
                 fn try_from(line: &'s str) -> Result<Self, Self::Error> {
-                    $(
-                        if line.starts_with(stringify!([<$variantname:upper>]))
-                            & line
-                                .get(stringify!([<$variantname:upper>]).len()..6)
-                                .map(|s| s.trim().is_empty())
-                                .ok_or_else(|| PdbRecordParseError::LineTooShort(
-                                    line.to_owned()
-                                ))?
-                        {
-                            Ok(Self::$variantname {
-                                $(
+                    match line.get(..6).unwrap_or(line).trim_end() {
+                        $(
+                            stringify!([<$variantname:upper>]) => {
+                                Ok(Self::$variantname {$(
                                     $columnname: {
                                         let field_to_end = line
                                             .get($columnstart..)
                                             .ok_or_else(|| PdbRecordParseError::LineTooShort(
-                                                line.to_owned()
+                                                line.to_string()
                                             ))?;
                                         let field_str = field_to_end
-                                            .get(..$columnend - $columnstart + 1)
-                                            .unwrap_or(field_to_end);
+                                            .get(..=$columnend - $columnstart)
+                                            .unwrap_or(field_to_end)
+                                            $(.$parsepostproc())*;
                                         ParseFromPdb::parse_from_pdb(field_str)?
                                     }
-                                ),*
-                            })
-                        } else
-                    )+ {
-                        Err(
-                            PdbRecordParseError::UnknownRecordType(
-                                line[..=6].trim().to_owned()
-                            )
-                        )
+                                ),*})
+                            }
+                        )+
+                        "" => Err(PdbRecordParseError::EmptyLine),
+                        s => Err(PdbRecordParseError::UnknownRecordType(s.to_string())),
                     }
                 }
             }
@@ -70,10 +67,11 @@ macro_rules! pdb_records_inner {
                     let mut line = format!("{: <100}", self.prefix());
                     match self {$(
                         Self::$variantname {$($columnname),*} => {$(
-                            let width = $columnend - $columnstart + 1;
-                            let s = WriteToPdb::write_to_pdb($columnname, width);
-                            line.replace_range($columnstart..=$columnend, &s);
-                        )*}
+                            line.replace_range(
+                                $columnstart..=$columnend,
+                                &$writer($columnname, $columnend - $columnstart + 1)
+                            );
+                        )+}
                     )+}
                     writeln!(f, "{}", line.trim())
                 }
